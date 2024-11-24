@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.tomasulo.controller.SimulationController">
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10;">
+            <Label fx:id="cycleLabel" style="-fx-font-size: 18px;"/>
+            <Region HBox.hgrow="ALWAYS" />
+            <Button text="Step" onAction="#handleStep"/>
+            <Button text="Run" onAction="#handleRun"/>
+            <Button text="Reset" onAction="#handleReset"/>
+            <Button text="Configure" onAction="#handleConfigure"/>
+        </HBox>
+    </top>
+    
+    <left>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <TextArea fx:id="codeInput" prefRowCount="20" prefColumnCount="30"/>
+            <Button text="Load Instructions" onAction="#handleLoadInstructions"/>
+        </VBox>
+    </left>
+    
+    <center>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <TableView fx:id="instructionTable" VBox.vgrow="ALWAYS"/>
+            
+            <HBox spacing="10">
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Add/Sub Reservation Stations"/>
+                    <TableView fx:id="addSubTable" VBox.vgrow="ALWAYS"/>
+                </VBox>
+                
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Mul/Div Reservation Stations"/>
+                    <TableView fx:id="mulDivTable" VBox.vgrow="ALWAYS"/>
+                </VBox>
+            </HBox>
+            
+            <HBox spacing="10">
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Load Buffers"/>
+                    <TableView fx:id="loadBufferTable" VBox.vgrow="ALWAYS"/>
+                </VBox>
+                
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Store Buffers"/>
+                    <TableView fx:id="storeBufferTable" VBox.vgrow="ALWAYS"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </center>
+    
+    <right>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <Label text="Register File"/>
+            <GridPane fx:id="registerFileGrid" hgap="5" vgap="5"/>
+        </VBox>
+    </right>
+</BorderPane>
