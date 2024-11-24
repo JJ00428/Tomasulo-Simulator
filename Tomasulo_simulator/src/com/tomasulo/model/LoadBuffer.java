@@ -23,8 +23,10 @@ public class LoadBuffer implements ExecutionUnit {
     public String getName() { return name.get(); }
     public StringProperty nameProperty() { return name; }
 
-    public boolean isBusy() { return busy.get(); }
-    public void setBusy(boolean value) { busy.set(value); }
+    @Override
+    public boolean isBusy() {
+        return busy.get();
+    }    public void setBusy(boolean value) { busy.set(value); }
     public BooleanProperty busyProperty() { return busy; }
 
     public int getAddress() { return address.get(); }

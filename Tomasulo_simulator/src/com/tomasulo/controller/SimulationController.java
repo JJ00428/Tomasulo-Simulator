@@ -1,30 +1,25 @@
 package com.tomasulo.controller;
 
-import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import com.tomasulo.model.*;
 import java.util.*;
-import java.io.IOException;
 
 public class SimulationController {
-    @FXML private TableView<InstructionEntry> instructionTable;
-    @FXML private TableView<ReservationStation> addSubTable;
-    @FXML private TableView<ReservationStation> mulDivTable;
-    @FXML private TableView<LoadBuffer> loadBufferTable;
-    @FXML private TableView<StoreBuffer> storeBufferTable;
-    @FXML private GridPane registerFileGrid;
-    @FXML private Label cycleLabel;
-    @FXML private TextArea codeInput;
-    
+    private TableView<InstructionEntry> instructionTable;
+    private TableView<ReservationStation> addSubTable;
+    private TableView<ReservationStation> mulDivTable;
+    private TableView<LoadBuffer> loadBufferTable;
+    private TableView<StoreBuffer> storeBufferTable;
+    private GridPane registerFileGrid;
+    private Label cycleLabel;
+    private TextArea codeInput;
+
     private int currentCycle = 0;
     private List<InstructionEntry> instructions = new ArrayList<>();
     private Map<String, Integer> latencies = new HashMap<>();
@@ -36,40 +31,98 @@ public class SimulationController {
     private List<StoreBuffer> storeBuffers = new ArrayList<>();
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
-    
-    @FXML
-    public void initialize() {
-        setupTables();
+
+    public BorderPane createView() {
+        BorderPane root = new BorderPane();
+
+        // Top
+        HBox topBox = new HBox(10);
+        cycleLabel = new Label("Cycle 0");
+        cycleLabel.setStyle("-fx-font-size: 18px;");
+        Button stepButton = new Button("Step");
+        stepButton.setOnAction(e -> handleStep());
+        Button runButton = new Button("Run");
+        runButton.setOnAction(e -> handleRun());
+        Button resetButton = new Button("Reset");
+        resetButton.setOnAction(e -> handleReset());
+        Button configureButton = new Button("Configure");
+        configureButton.setOnAction(e -> handleConfigure());
+        topBox.getChildren().addAll(cycleLabel, stepButton, runButton, resetButton, configureButton);
+        root.setTop(topBox);
+
+        // Left
+        VBox leftBox = new VBox(10);
+        codeInput = new TextArea();
+        codeInput.setPrefRowCount(20);
+        codeInput.setPrefColumnCount(30);
+        Button loadButton = new Button("Load Instructions");
+        loadButton.setOnAction(e -> handleLoadInstructions());
+        leftBox.getChildren().addAll(codeInput, loadButton);
+        root.setLeft(leftBox);
+
+        // Center
+        VBox centerBox = new VBox(10);
+        instructionTable = new TableView<>();
+        setupInstructionTable();
+
+        HBox stationsBox = new HBox(10);
+        VBox addSubBox = new VBox(5);
+        addSubTable = new TableView<>();
+        setupReservationStationTable(addSubTable);
+        addSubBox.getChildren().addAll(new Label("Add/Sub Reservation Stations"), addSubTable);
+
+        VBox mulDivBox = new VBox(5);
+        mulDivTable = new TableView<>();
+        setupReservationStationTable(mulDivTable);
+        mulDivBox.getChildren().addAll(new Label("Mul/Div Reservation Stations"), mulDivTable);
+
+        stationsBox.getChildren().addAll(addSubBox, mulDivBox);
+
+        HBox buffersBox = new HBox(10);
+        VBox loadBox = new VBox(5);
+        loadBufferTable = new TableView<>();
+        setupLoadBufferTable();
+        loadBox.getChildren().addAll(new Label("Load Buffers"), loadBufferTable);
+
+        VBox storeBox = new VBox(5);
+        storeBufferTable = new TableView<>();
+        setupStoreBufferTable();
+        storeBox.getChildren().addAll(new Label("Store Buffers"), storeBufferTable);
+
+        buffersBox.getChildren().addAll(loadBox, storeBox);
+
+        centerBox.getChildren().addAll(instructionTable, stationsBox, buffersBox);
+        root.setCenter(centerBox);
+
+        // Right
+        VBox rightBox = new VBox(10);
+        registerFileGrid = new GridPane();
+        registerFileGrid.setHgap(5);
+        registerFileGrid.setVgap(5);
+        rightBox.getChildren().addAll(new Label("Register File"), registerFileGrid);
+        root.setRight(rightBox);
+
         setupInitialValues();
+
+        return root;
     }
-    
-    private void setupTables() {
-        // Setup instruction table columns
+
+    private void setupInstructionTable() {
         TableColumn<InstructionEntry, Integer> iterationCol = new TableColumn<>("Iteration #");
         TableColumn<InstructionEntry, String> instructionCol = new TableColumn<>("Instruction");
         TableColumn<InstructionEntry, Integer> issueCol = new TableColumn<>("Issue");
         TableColumn<InstructionEntry, Integer> executeCol = new TableColumn<>("Execute");
         TableColumn<InstructionEntry, Integer> writeCol = new TableColumn<>("Write Result");
-        
+
         iterationCol.setCellValueFactory(cellData -> cellData.getValue().iterationProperty().asObject());
         instructionCol.setCellValueFactory(cellData -> cellData.getValue().instructionProperty());
         issueCol.setCellValueFactory(cellData -> cellData.getValue().issueTimeProperty().asObject());
         executeCol.setCellValueFactory(cellData -> cellData.getValue().executeTimeProperty().asObject());
         writeCol.setCellValueFactory(cellData -> cellData.getValue().writeTimeProperty().asObject());
-        
+
         instructionTable.getColumns().addAll(iterationCol, instructionCol, issueCol, executeCol, writeCol);
-        
-        // Setup reservation station tables
-        setupReservationStationTable(addSubTable);
-        setupReservationStationTable(mulDivTable);
-        
-        // Setup load buffer table
-        setupLoadBufferTable();
-        
-        // Setup store buffer table
-        setupStoreBufferTable();
     }
-    
+
     private void setupReservationStationTable(TableView<ReservationStation> table) {
         TableColumn<ReservationStation, String> nameCol = new TableColumn<>("Name");
         TableColumn<ReservationStation, Boolean> busyCol = new TableColumn<>("Busy");
@@ -79,7 +132,7 @@ public class SimulationController {
         TableColumn<ReservationStation, String> qjCol = new TableColumn<>("Qj");
         TableColumn<ReservationStation, String> qkCol = new TableColumn<>("Qk");
         TableColumn<ReservationStation, Integer> cyclesCol = new TableColumn<>("Cycles");
-        
+
         nameCol.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         busyCol.setCellValueFactory(cellData -> cellData.getValue().busyProperty());
         opCol.setCellValueFactory(cellData -> cellData.getValue().operationProperty());
@@ -88,38 +141,38 @@ public class SimulationController {
         qjCol.setCellValueFactory(cellData -> cellData.getValue().qjProperty());
         qkCol.setCellValueFactory(cellData -> cellData.getValue().qkProperty());
         cyclesCol.setCellValueFactory(cellData -> cellData.getValue().cyclesProperty().asObject());
-        
+
         table.getColumns().addAll(nameCol, busyCol, opCol, vjCol, vkCol, qjCol, qkCol, cyclesCol);
     }
-    
+
     private void setupLoadBufferTable() {
         TableColumn<LoadBuffer, String> nameCol = new TableColumn<>("Name");
         TableColumn<LoadBuffer, Boolean> busyCol = new TableColumn<>("Busy");
         TableColumn<LoadBuffer, Integer> addressCol = new TableColumn<>("Address");
-        
+
         nameCol.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         busyCol.setCellValueFactory(cellData -> cellData.getValue().busyProperty());
         addressCol.setCellValueFactory(cellData -> cellData.getValue().addressProperty().asObject());
-        
+
         loadBufferTable.getColumns().addAll(nameCol, busyCol, addressCol);
     }
-    
+
     private void setupStoreBufferTable() {
         TableColumn<StoreBuffer, String> nameCol = new TableColumn<>("Name");
         TableColumn<StoreBuffer, Boolean> busyCol = new TableColumn<>("Busy");
         TableColumn<StoreBuffer, Integer> addressCol = new TableColumn<>("Address");
         TableColumn<StoreBuffer, Double> valueCol = new TableColumn<>("Value");
         TableColumn<StoreBuffer, String> qCol = new TableColumn<>("Q");
-        
+
         nameCol.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         busyCol.setCellValueFactory(cellData -> cellData.getValue().busyProperty());
         addressCol.setCellValueFactory(cellData -> cellData.getValue().addressProperty().asObject());
         valueCol.setCellValueFactory(cellData -> cellData.getValue().valueProperty().asObject());
         qCol.setCellValueFactory(cellData -> cellData.getValue().qProperty());
-        
+
         storeBufferTable.getColumns().addAll(nameCol, busyCol, addressCol, valueCol, qCol);
     }
-    
+
     private void setupInitialValues() {
         // Set up default latencies
         latencies.put("ADD", 2);
@@ -130,50 +183,46 @@ public class SimulationController {
         latencies.put("S.D", 2);
         latencies.put("ADDI", 1);
         latencies.put("SUBI", 1);
-        
+
         // Initialize cache
         cache = new Cache(32, 4, 1, 10); // 32 blocks, 4 words per block, 1 cycle hit, 10 cycles miss
-        
+
         // Initialize register file
         registerFile = new RegisterFile(32);
-        
+
         // Initialize reservation stations
         for (int i = 0; i < 3; i++) {
             addSubStations.add(new ReservationStation("Add" + (i+1)));
             mulDivStations.add(new ReservationStation("Mul" + (i+1)));
         }
-        
+
         // Initialize load/store buffers
         for (int i = 0; i < 3; i++) {
             loadBuffers.add(new LoadBuffer("Load" + (i+1)));
             storeBuffers.add(new StoreBuffer("Store" + (i+1)));
         }
-        
+
         updateDisplay();
     }
-    
-    @FXML
+
     private void handleStep() {
         currentCycle++;
         executeOneCycle();
         updateDisplay();
     }
-    
-    @FXML
+
     private void handleRun() {
         while (!isSimulationComplete()) {
             handleStep();
         }
     }
-    
-    @FXML
+
     private void handleReset() {
         currentCycle = 0;
         instructions.clear();
         setupInitialValues();
     }
-    
-    @FXML
+
     private void handleLoadInstructions() {
         String[] lines = codeInput.getText().split("\n");
         instructions.clear();
@@ -349,7 +398,7 @@ public class SimulationController {
             writeResult(result);
         }
     }
-    
+
     private void collectReadyResults(List<? extends ExecutionUnit> units, List<String> results) {
         for (ExecutionUnit unit : units) {
             if (unit.isReadyToWrite()) {
@@ -357,6 +406,7 @@ public class SimulationController {
             }
         }
     }
+
     
     private void writeResult(String unitName) {
         ExecutionUnit unit = findExecutionUnit(unitName);
@@ -446,57 +496,54 @@ public class SimulationController {
                loadBuffers.stream().noneMatch(LoadBuffer::isBusy) &&
                storeBuffers.stream().noneMatch(StoreBuffer::isBusy);
     }
-    
-    @FXML
+
     private void handleConfigure() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ConfigurationView.fxml"));
-            Parent root = loader.load();
-            
-            ConfigurationController configController = loader.getController();
-            configController.setLatencies(latencies);
-            configController.setCacheParams(Map.of(
+        Stage configStage = new Stage();
+        configStage.initModality(Modality.APPLICATION_MODAL);
+        configStage.setTitle("Configuration");
+
+        ConfigurationController configController = new ConfigurationController();
+        configController.setLatencies(latencies);
+        configController.setCacheParams(Map.of(
                 "size", cache.getSize(),
                 "blockSize", cache.getBlockSize(),
                 "hitLatency", cache.getHitLatency(),
                 "missLatency", cache.getMissLatency()
-            ));
-            configController.setBufferSizes(Map.of(
+        ));
+        configController.setBufferSizes(Map.of(
                 "addSub", addSubStations.size(),
                 "mulDiv", mulDivStations.size(),
                 "load", loadBuffers.size(),
                 "store", storeBuffers.size()
-            ));
-            
-            Stage stage = new Stage();
-            stage.setTitle("Configuration");
-            stage.setScene(new Scene(root));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-            
-            // After the dialog is closed, update the simulator with new values
-            updateSimulatorConfiguration();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        ));
+
+        Scene configScene = new Scene(configController.createConfigView(), 400, 600);
+        configStage.setScene(configScene);
+        configStage.showAndWait();
+
+        // After the dialog is closed, update the simulator with new values
+        updateSimulatorConfiguration();
     }
 
     private void updateSimulatorConfiguration() {
         // Update cache
         cache = new Cache(
-            cacheParams.get("size"),
-            cacheParams.get("blockSize"),
-            cacheParams.get("hitLatency"),
-            cacheParams.get("missLatency")
+                cacheParams.get("size"),
+                cacheParams.get("blockSize"),
+                cacheParams.get("hitLatency"),
+                cacheParams.get("missLatency")
         );
-        
+
         // Update buffer sizes
         updateBufferSizes(addSubStations, bufferSizes.get("addSub"));
         updateBufferSizes(mulDivStations, bufferSizes.get("mulDiv"));
         updateBufferSizes(loadBuffers, bufferSizes.get("load"));
         updateBufferSizes(storeBuffers, bufferSizes.get("store"));
-        
+
         // Latencies are already updated in the map
+
+        // Refresh the display
+        updateDisplay();
     }
 
     private <T> void updateBufferSizes(List<T> buffer, int newSize) {
@@ -525,6 +572,7 @@ public class SimulationController {
         void setQj(String value);
         void setQk(String value);
         String getResult();
+        boolean isBusy();
     }
 
 

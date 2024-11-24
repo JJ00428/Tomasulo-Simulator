@@ -1,19 +1,18 @@
 package com.tomasulo;
 
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import com.tomasulo.controller.SimulationController;
 
 public class Main extends Application {
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/resources/view/MainView.fxml"));
-        Parent root = loader.load();
+    public void start(Stage primaryStage) {
+        SimulationController controller = new SimulationController();
+        Scene scene = new Scene(controller.createView(), 1200, 800);
         primaryStage.setTitle("Tomasulo Algorithm Simulator");
-        primaryStage.setScene(new Scene(root, 800, 600));
+        primaryStage.setScene(scene);
         primaryStage.show();
     }
 

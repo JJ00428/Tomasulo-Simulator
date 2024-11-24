@@ -6,6 +6,9 @@ public interface ExecutionUnit {
     void clear();
     String getQj();
     String getQk();
+
+    boolean isBusy();
+
     void setVj(String value);
     void setVk(String value);
     void setQj(String value);
