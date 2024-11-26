@@ -23,6 +23,7 @@ public class SimulationController {
     private TextArea codeInput;
 
     private int currentCycle = 0;
+    private int currentInstruction = 0;
     private List<InstructionEntry> instructions = new ArrayList<>();
     private Map<String, Integer> operations = new HashMap<>();
     private Cache cache;
@@ -242,8 +243,11 @@ public class SimulationController {
     private void executeOneCycle() {
         //Issue
         //if there are instructions to issue, and there's a place for the one in turn, then issue it
-        if (!instructions.isEmpty() && canIssueInstruction(instructions.get(0))) {
-            issueInstruction(instructions.get(0));
+        if(currentInstruction< instructions.size()) {
+            if (!instructions.isEmpty() && canIssueInstruction(instructions.get(currentInstruction))) {
+                issueInstruction(instructions.get(currentInstruction));
+                currentInstruction++;
+            }
         }
         
         //Execute
@@ -319,7 +323,16 @@ public class SimulationController {
         
         instruction.setIssueTime(currentCycle);
     }
-    
+
+//    private ReservationStation firstAvailableStation(List<ReservationStation> stations) {
+//        for (ReservationStation station : stations) {
+//            if (!station.isBusy()) {
+//                return station;
+//            }
+//        }
+//        return false;
+//    }
+
     private void issueToAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = addSubStations.stream().filter(s -> !s.isBusy()).findFirst().get();
         rs.setBusy(true);
