@@ -8,6 +8,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import com.tomasulo.model.*;
+
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class SimulationController {
@@ -22,7 +24,7 @@ public class SimulationController {
 
     private int currentCycle = 0;
     private List<InstructionEntry> instructions = new ArrayList<>();
-    private Map<String, Integer> latencies = new HashMap<>();
+    private Map<String, Integer> operations = new HashMap<>();
     private Cache cache;
     private RegisterFile registerFile;
     private List<ReservationStation> addSubStations = new ArrayList<>();
@@ -174,22 +176,27 @@ public class SimulationController {
     }
 
     private void setupInitialValues() {
-        // Set up default latencies
-        latencies.put("ADD", 2);
-        latencies.put("SUB", 2);
-        latencies.put("MUL", 10);
-        latencies.put("DIV", 40);
-        latencies.put("L.D", 2);
-        latencies.put("S.D", 2);
-        latencies.put("ADDI", 1);
-        latencies.put("SUBI", 1);
+        // Set up default operations
+        operations.put("ADD", 2);
+        operations.put("SUB", 2);
+        operations.put("MUL", 10);
+        operations.put("DIV", 40);
+        operations.put("L.D", 2);
+        operations.put("S.D", 2);
+        operations.put("ADDI", 1);
+        operations.put("SUBI", 1);
 
         // Initialize cache
-        cache = new Cache(32, 4, 1, 10); // 32 blocks, 4 words per block, 1 cycle hit, 10 cycles miss
+        cache = new Cache(32, 4, 1, 10); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
 
         // Initialize register file
         registerFile = new RegisterFile(32);
 
+        addSubStations.clear();
+        mulDivStations.clear();
+        loadBuffers.clear();
+        storeBuffers.clear();
+        
         // Initialize reservation stations
         for (int i = 0; i < 3; i++) {
             addSubStations.add(new ReservationStation("Add" + (i+1)));
@@ -233,15 +240,16 @@ public class SimulationController {
     }
     
     private void executeOneCycle() {
-        // Issue stage
+        //Issue
+        //if there are instructions to issue, and there's a place for the one in turn, then issue it
         if (!instructions.isEmpty() && canIssueInstruction(instructions.get(0))) {
             issueInstruction(instructions.get(0));
         }
         
-        // Execute stage
+        //Execute
         executeInstructions();
         
-        // Write Result stage
+        //Write
         writeResults();
         
         // Handle bus contention
@@ -250,24 +258,48 @@ public class SimulationController {
         // Update cache status
         updateCache();
     }
-    
+
+    private boolean hasAvailableStation(List<ReservationStation> stations) {
+        for (ReservationStation station : stations) {
+            if (!station.isBusy()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
     private boolean canIssueInstruction(InstructionEntry instruction) {
-        // Check if there's a free reservation station or buffer for this instruction
+        //to get tpe of opperation to know which rs or buffer to check
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
-        
+
+
+        //is there an empty reservation station or buffer for this instruction?
         if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI")) {
-            return addSubStations.stream().anyMatch(rs -> !rs.isBusy());
+            return hasAvailableStation(addSubStations);
         } else if (op.equals("MUL") || op.equals("DIV")) {
-            return mulDivStations.stream().anyMatch(rs -> !rs.isBusy());
+            return hasAvailableStation(mulDivStations);
         } else if (op.equals("L.D")) {
-            return loadBuffers.stream().anyMatch(lb -> !lb.isBusy());
+            for (LoadBuffer buffer : loadBuffers) {
+                if (!buffer.isBusy()) {
+                    return true;
+                }
+            }
+            return false;
         } else if (op.equals("S.D")) {
-            return storeBuffers.stream().anyMatch(sb -> !sb.isBusy());
+            for (StoreBuffer buffer : storeBuffers) {
+                if (!buffer.isBusy()) {
+                    return true;
+                }
+            }
+            return false;
         }
         
         return false;
     }
+
     private void issueInstruction(InstructionEntry instruction) {
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
@@ -296,7 +328,7 @@ public class SimulationController {
         rs.setVk(src2 != null ? registerFile.getValue(src2) : "");
         rs.setQj(registerFile.getStatus(src1));
         rs.setQk(src2 != null ? registerFile.getStatus(src2) : "");
-        rs.setCycles(latencies.get(op));
+        rs.setCycles(operations.get(op));
         registerFile.setStatus(dest, rs.getName());
     }
     
@@ -308,7 +340,7 @@ public class SimulationController {
         rs.setVk(registerFile.getValue(src2));
         rs.setQj(registerFile.getStatus(src1));
         rs.setQk(registerFile.getStatus(src2));
-        rs.setCycles(latencies.get(op));
+        rs.setCycles(operations.get(op));
         registerFile.setStatus(dest, rs.getName());
     }
     
@@ -388,10 +420,10 @@ public class SimulationController {
         List<String> resultsToWrite = new ArrayList<>();
         
         // Collect all results ready to write
-        collectReadyResults((List<? extends ExecutionUnit>) addSubStations, resultsToWrite);
-        collectReadyResults((List<? extends ExecutionUnit>) mulDivStations, resultsToWrite);
-        collectReadyResults((List<? extends ExecutionUnit>) loadBuffers, resultsToWrite);
-        collectReadyResults((List<? extends ExecutionUnit>) storeBuffers, resultsToWrite);
+//        collectReadyResults((List<? extends ExecutionUnit>) addSubStations, resultsToWrite);
+//        collectReadyResults((List<? extends ExecutionUnit>) mulDivStations, resultsToWrite);
+//        collectReadyResults((List<? extends ExecutionUnit>) loadBuffers, resultsToWrite);
+//        collectReadyResults((List<? extends ExecutionUnit>) storeBuffers, resultsToWrite);
         
         // Write results
         for (String result : resultsToWrite) {
@@ -425,8 +457,8 @@ public class SimulationController {
         registerFile.clearStatus(completedUnit.getName());
         
         // Update waiting reservation stations
-        updateWaitingUnits((List<? extends ExecutionUnit>) addSubStations, completedUnit);
-        updateWaitingUnits((List<? extends ExecutionUnit>) mulDivStations, completedUnit);
+//        updateWaitingUnits((List<? extends ExecutionUnit>) addSubStations, completedUnit);
+//        updateWaitingUnits((List<? extends ExecutionUnit>) mulDivStations, completedUnit);
         
         // Update waiting store buffers
         for (StoreBuffer sb : storeBuffers) {
@@ -503,7 +535,7 @@ public class SimulationController {
         configStage.setTitle("Configuration");
 
         ConfigurationController configController = new ConfigurationController();
-        configController.setLatencies(latencies);
+        configController.setOperations(operations);
         configController.setCacheParams(Map.of(
                 "size", cache.getSize(),
                 "blockSize", cache.getBlockSize(),

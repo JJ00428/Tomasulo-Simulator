@@ -9,15 +9,14 @@ public class InstructionEntry {
     private final IntegerProperty executeTime;
     private final IntegerProperty writeTime;
 
-    public InstructionEntry(String inst, int iter) {
+    public InstructionEntry(String inst, int itr) {
         this.instruction = new SimpleStringProperty(inst);
-        this.iteration = new SimpleIntegerProperty(iter);
+        this.iteration = new SimpleIntegerProperty(itr);
         this.issueTime = new SimpleIntegerProperty(-1);
         this.executeTime = new SimpleIntegerProperty(-1);
         this.writeTime = new SimpleIntegerProperty(-1);
     }
 
-    // Getters and setters
     public String getInstruction() { return instruction.get(); }
     public void setInstruction(String value) { instruction.set(value); }
     public StringProperty instructionProperty() { return instruction; }

@@ -10,7 +10,7 @@ public class ConfigurationController {
     private TextField cacheSize, blockSize, hitLatency, missLatency;
     private TextField addSubStations, mulDivStations, loadBuffers, storeBuffers;
 
-    private Map<String, Integer> latencies;
+    private Map<String, Integer> operations;
     private Map<String, Integer> cacheParams;
     private Map<String, Integer> bufferSizes;
 
@@ -22,8 +22,8 @@ public class ConfigurationController {
         grid.setHgap(10);
         grid.setVgap(10);
 
-        // Instruction Latencies
-        grid.add(new Label("Instruction Latencies"), 0, 0, 2, 1);
+        // Instruction Operations
+        grid.add(new Label("Instruction Operations"), 0, 0, 2, 1);
         grid.add(new Label("ADD:"), 0, 1);
         addLatency = new TextField();
         grid.add(addLatency, 1, 1);
@@ -99,14 +99,14 @@ public class ConfigurationController {
         return root;
     }
 
-    public void setLatencies(Map<String, Integer> latencies) {
-        this.latencies = latencies;
-        addLatency.setText(latencies.get("ADD").toString());
-        subLatency.setText(latencies.get("SUB").toString());
-        mulLatency.setText(latencies.get("MUL").toString());
-        divLatency.setText(latencies.get("DIV").toString());
-        loadLatency.setText(latencies.get("L.D").toString());
-        storeLatency.setText(latencies.get("S.D").toString());
+    public void setOperations(Map<String, Integer> operations) {
+        this.operations = operations;
+        addLatency.setText(operations.get("ADD").toString());
+        subLatency.setText(operations.get("SUB").toString());
+        mulLatency.setText(operations.get("MUL").toString());
+        divLatency.setText(operations.get("DIV").toString());
+        loadLatency.setText(operations.get("L.D").toString());
+        storeLatency.setText(operations.get("S.D").toString());
     }
 
     public void setCacheParams(Map<String, Integer> cacheParams) {
@@ -126,7 +126,7 @@ public class ConfigurationController {
     }
 
     private void handleSave() {
-        updateLatencies();
+        updateOperations();
         updateCacheParams();
         updateBufferSizes();
         closeDialog();
@@ -136,13 +136,13 @@ public class ConfigurationController {
         closeDialog();
     }
 
-    private void updateLatencies() {
-        latencies.put("ADD", Integer.parseInt(addLatency.getText()));
-        latencies.put("SUB", Integer.parseInt(subLatency.getText()));
-        latencies.put("MUL", Integer.parseInt(mulLatency.getText()));
-        latencies.put("DIV", Integer.parseInt(divLatency.getText()));
-        latencies.put("L.D", Integer.parseInt(loadLatency.getText()));
-        latencies.put("S.D", Integer.parseInt(storeLatency.getText()));
+    private void updateOperations() {
+        operations.put("ADD", Integer.parseInt(addLatency.getText()));
+        operations.put("SUB", Integer.parseInt(subLatency.getText()));
+        operations.put("MUL", Integer.parseInt(mulLatency.getText()));
+        operations.put("DIV", Integer.parseInt(divLatency.getText()));
+        operations.put("L.D", Integer.parseInt(loadLatency.getText()));
+        operations.put("S.D", Integer.parseInt(storeLatency.getText()));
     }
 
     private void updateCacheParams() {
