@@ -10,6 +10,7 @@ public class StoreBuffer implements ExecutionUnit {
     private final StringProperty q;
     private final IntegerProperty cycles;
     private final BooleanProperty readyToWrite;
+    private InstructionEntry instruction;
 
     public StoreBuffer(String name) {
         this.name = new SimpleStringProperty(name);
@@ -77,4 +78,9 @@ public class StoreBuffer implements ExecutionUnit {
     public void setQj(String value) { setQ(value); }
     @Override
     public void setQk(String value) { /* Not applicable for StoreBuffer */ }
+
+    public void setInstruction(InstructionEntry value) { this.instruction = value; }
+    @Override
+    public InstructionEntry getInstruction() { return instruction; }
+
 }

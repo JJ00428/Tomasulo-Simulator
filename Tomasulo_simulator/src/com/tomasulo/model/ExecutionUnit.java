@@ -3,6 +3,9 @@ package com.tomasulo.model;
 public interface ExecutionUnit {
     String getName();
     boolean isReadyToWrite();
+
+    InstructionEntry getInstruction();
+
     void clear();
     String getQj();
     String getQk();

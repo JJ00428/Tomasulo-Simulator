@@ -9,6 +9,7 @@ public class LoadBuffer implements ExecutionUnit {
     private final IntegerProperty cycles;
     private final BooleanProperty readyToWrite;
     private double result;
+    private InstructionEntry instruction;
 
     public LoadBuffer(String name) {
         this.name = new SimpleStringProperty(name);
@@ -67,4 +68,9 @@ public class LoadBuffer implements ExecutionUnit {
     public void setQj(String value) { /* Not applicable for LoadBuffer */ }
     @Override
     public void setQk(String value) { /* Not applicable for LoadBuffer */ }
+
+    public void setInstruction(InstructionEntry value) { this.instruction = value; }
+    @Override
+    public InstructionEntry getInstruction() { return instruction; }
+
 }

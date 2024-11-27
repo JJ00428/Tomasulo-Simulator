@@ -13,6 +13,7 @@ public class ReservationStation implements ExecutionUnit {
     private final IntegerProperty cycles;
     private final BooleanProperty readyToWrite;
     private double result;
+    private InstructionEntry instruction;
 
     public ReservationStation(String name) {
         this.name = new SimpleStringProperty(name);
@@ -76,6 +77,10 @@ public class ReservationStation implements ExecutionUnit {
     public void setResult(double value) { this.result = value; }
     @Override
     public String getResult() { return String.valueOf(result); }
+
+    public void setInstruction(InstructionEntry value) { this.instruction = value; }
+    @Override
+    public InstructionEntry getInstruction() { return instruction; }
 
     @Override
     public void clear() {
