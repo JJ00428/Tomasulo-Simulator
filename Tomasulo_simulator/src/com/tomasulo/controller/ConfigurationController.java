@@ -4,6 +4,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.geometry.Insets;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -133,6 +134,15 @@ public class ConfigurationController {
     }
 
     private void handleSave() {
+        TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency,
+                cacheSize, blockSize, hitLatency, missLatency, addSubStations, mulDivStations, loadBuffers, storeBuffers
+        };
+        for(TextField field : allFields){
+            if(field.getText() == null || field.getText().isEmpty()){
+                toaster.setText("Please fill in all text fields!");
+                return;
+            }
+        }
         updateOperations();
         updateCacheParams();
         updateBufferSizes();
