@@ -72,9 +72,7 @@ public class SimulationController {
         stepButton.setOnAction(e -> handleStep());
         Button resetButton = new Button("Reset");
         resetButton.setOnAction(e -> handleReset());
-        Button configureButton = new Button("Configure");
-        configureButton.setOnAction(e -> handleConfigure());
-        topBox.getChildren().addAll(cycleLabel, stepButton, resetButton, configureButton);
+        topBox.getChildren().addAll(cycleLabel, stepButton, resetButton);
         root.setTop(topBox);
 
         // Left
@@ -260,12 +258,6 @@ public class SimulationController {
         currentCycle++;
         executeOneCycle();
         updateDisplay();
-    }
-
-    private void handleRun() {
-        while (!isSimulationComplete()) {
-            handleStep();
-        }
     }
 
     private void handleReset() {
@@ -681,34 +673,6 @@ public class SimulationController {
                 mulDivStations.stream().noneMatch(ReservationStation::isBusy) &&
                 loadBuffers.stream().noneMatch(LoadBuffer::isBusy) &&
                 storeBuffers.stream().noneMatch(StoreBuffer::isBusy);
-    }
-
-    private void handleConfigure() {
-        Stage configStage = new Stage();
-        configStage.initModality(Modality.APPLICATION_MODAL);
-        configStage.setTitle("Configuration");
-
-        ConfigurationController configController = new ConfigurationController();
-        configController.setOperations(operations);
-        configController.setCacheParams(Map.of(
-                "size", cache.getSize(),
-                "blockSize", cache.getBlockSize(),
-                "hitLatency", cache.getHitLatency(),
-                "missLatency", cache.getMissLatency()
-        ));
-        configController.setBufferSizes(Map.of(
-                "addSub", addSubStations.size(),
-                "mulDiv", mulDivStations.size(),
-                "load", loadBuffers.size(),
-                "store", storeBuffers.size()
-        ));
-
-        Scene configScene = new Scene(configController.createConfigView(), 400, 600);
-        configStage.setScene(configScene);
-        configStage.showAndWait();
-
-        // After the dialog is closed, update the simulator with new values
-        updateSimulatorConfiguration();
     }
 
     private void updateSimulatorConfiguration() {
