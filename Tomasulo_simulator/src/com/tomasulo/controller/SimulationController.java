@@ -13,6 +13,11 @@ import java.lang.reflect.Array;
 import java.util.*;
 
 public class SimulationController {
+    private Scene scene;
+    private BorderPane root;
+    private VBox configView;
+    private BorderPane simView;
+    private final ConfigurationController config = new ConfigurationController();
     private TableView<InstructionEntry> instructionTable;
     private TableView<ReservationStation> addSubTable;
     private TableView<ReservationStation> mulDivTable;
@@ -34,6 +39,27 @@ public class SimulationController {
     private List<StoreBuffer> storeBuffers = new ArrayList<>();
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
+    public SimulationController(){
+        root = new BorderPane();
+        configView = config.createConfigView();
+        simView = this.createView();
+        Button switcher = new Button("Switch View");
+        switcher.setOnAction(e -> switchView());
+        root.setTop(switcher);
+        root.setCenter(configView);
+        scene = new Scene(root, 1200, 800);
+    }
+    public Scene getScene(){
+        return scene;
+    }
+    public void switchView(){
+        if(root.getCenter() == configView){
+            root.setCenter(simView);
+            handleReset();
+        }
+        else
+            root.setCenter(configView);
+    }
 
     public BorderPane createView() {
         BorderPane root = new BorderPane();
@@ -44,13 +70,11 @@ public class SimulationController {
         cycleLabel.setStyle("-fx-font-size: 18px;");
         Button stepButton = new Button("Step");
         stepButton.setOnAction(e -> handleStep());
-        Button runButton = new Button("Run");
-        runButton.setOnAction(e -> handleRun());
         Button resetButton = new Button("Reset");
         resetButton.setOnAction(e -> handleReset());
         Button configureButton = new Button("Configure");
         configureButton.setOnAction(e -> handleConfigure());
-        topBox.getChildren().addAll(cycleLabel, stepButton, runButton, resetButton, configureButton);
+        topBox.getChildren().addAll(cycleLabel, stepButton, resetButton, configureButton);
         root.setTop(topBox);
 
         // Left
@@ -186,9 +210,19 @@ public class SimulationController {
         operations.put("S.D", 2);
         operations.put("ADDI", 1);
         operations.put("SUBI", 1);
+        if(!config.operations.isEmpty())
+            operations = config.operations;
 
         // Initialize cache
-        cache = new Cache(32, 4, 1, 10); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
+        if(config.cacheParams.isEmpty())
+            cache = new Cache(32, 4, 1, 10); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
+        else
+            cache = new Cache(config.cacheParams.get("size"),
+                    config.cacheParams.get("blockSize"),
+                    config.cacheParams.get("hitLatency"),
+                    config.cacheParams.get("missLatency")
+            );
+
 
         // Initialize register file
         registerFile = new RegisterFile(32);
@@ -197,16 +231,25 @@ public class SimulationController {
         mulDivStations.clear();
         loadBuffers.clear();
         storeBuffers.clear();
-        
+
+
+        int numAddSub = config.bufferSizes.getOrDefault("addSub", 3);
+        int numMulDiv = config.bufferSizes.getOrDefault("mulDiv", 3);
+        int numLoad = config.bufferSizes.getOrDefault("load", 3);
+        int numStore = config.bufferSizes.getOrDefault("store", 3);
         // Initialize reservation stations
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < numAddSub; i++) {
             addSubStations.add(new ReservationStation("Add" + (i+1)));
+        }
+        for (int i = 0; i < numMulDiv; i++) {
             mulDivStations.add(new ReservationStation("Mul" + (i+1)));
         }
 
         // Initialize load/store buffers
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < numLoad; i++) {
             loadBuffers.add(new LoadBuffer("Load" + (i+1)));
+        }
+        for (int i = 0; i < numStore; i++) {
             storeBuffers.add(new StoreBuffer("Store" + (i+1)));
         }
 
@@ -243,7 +286,7 @@ public class SimulationController {
         currentInstruction = 0;
         updateDisplay();
     }
-    
+
     private void executeOneCycle() {
         //Issue
         //if there are instructions to issue, and there's a place for the one in turn, then issue it
@@ -253,16 +296,16 @@ public class SimulationController {
                 currentInstruction++;
             }
         }
-        
+
         //Execute
         executeInstructions();
-        
+
         //Write
         writeResults();
-        
+
         //if 2 writes happen at the same time
         resolveBusContention();
-        
+
         // Update cache status
         updateCache();
 
@@ -305,7 +348,7 @@ public class SimulationController {
             }
             return false;
         }
-        
+
         return false;
     }
 
@@ -315,7 +358,7 @@ public class SimulationController {
         String dest = parts[1].replace(",", "");
         String src1 = parts[2].replace(",", "");
         String src2 = parts.length > 3 ? parts[3] : null;
-        
+
         if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI")) {
             issueToAddSubStation(instruction, op, dest, src1, src2);
         } else if (op.equals("MUL") || op.equals("DIV")) {
@@ -325,7 +368,7 @@ public class SimulationController {
         } else if (op.equals("S.D")) {
             issueToStoreBuffer(instruction, src1, dest);
         }
-        
+
         instruction.setIssueTime(currentCycle);
     }
 
@@ -368,7 +411,7 @@ public class SimulationController {
         registerFile.setStatus(dest, rs.getName());
         instruction.setIssueTime(currentCycle);
     }
-    
+
     private void issueToMulDivStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = firstAvailableStation(mulDivStations);
         rs.setInstruction(instruction);
@@ -382,7 +425,7 @@ public class SimulationController {
         registerFile.setStatus(dest, rs.getName());
         instruction.setIssueTime(currentCycle);
     }
-    
+
     private void issueToLoadBuffer(InstructionEntry instruction, String dest, String address) {
         LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
         lb.setInstruction(instruction);
@@ -391,7 +434,7 @@ public class SimulationController {
         registerFile.setStatus(dest, lb.getName());
         instruction.setIssueTime(currentCycle);
     }
-    
+
     private void issueToStoreBuffer(InstructionEntry instruction, String src, String address) {
         StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
         sb.setInstruction(instruction);
@@ -401,7 +444,7 @@ public class SimulationController {
         sb.setQ(registerFile.getStatus(src));
         instruction.setIssueTime(currentCycle);
     }
-    
+
     private void executeInstructions() {
         executeReservationStations(addSubStations);
         executeReservationStations(mulDivStations);
@@ -425,7 +468,7 @@ public class SimulationController {
             }
         }
     }
-    
+
     private void executeLoadBuffers() {
         for (LoadBuffer lb : loadBuffers) {
             if (lb.isBusy() && !lb.isReadyToWrite()) {
@@ -446,7 +489,7 @@ public class SimulationController {
             }
         }
     }
-    
+
     private void executeStoreBuffers() {
         for (StoreBuffer sb : storeBuffers) {
             if (sb.isBusy() && sb.getQ().isEmpty()) {
@@ -506,13 +549,13 @@ public class SimulationController {
 
     private void writeResults() {
         List<String> resultsToWrite = new ArrayList<>();
-        
+
         //get all results ready to write
         collectReadyResults(addSubStations, resultsToWrite);
         collectReadyResults(mulDivStations, resultsToWrite);
         collectReadyResults(loadBuffers, resultsToWrite);
         collectReadyResults(storeBuffers, resultsToWrite);
-        
+
         //write them
         for (String result : resultsToWrite) {
             writeResult(result);
@@ -561,16 +604,16 @@ public class SimulationController {
 
 
 
-    
-    
+
+
     private void updateDependentUnits(ExecutionUnit completedUnit) {
         //update register file
         registerFile.clearStatus(completedUnit.getName());
-        
+
         //give value to all rs that need it
         updateWaitingUnits(addSubStations, completedUnit);
         updateWaitingUnits(mulDivStations, completedUnit);
-        
+
         //give value to all store that need it
         for (StoreBuffer sb : storeBuffers) {
             if (sb.getQ().equals(completedUnit.getName())) {
@@ -579,7 +622,7 @@ public class SimulationController {
             }
         }
     }
-    
+
     private void updateWaitingUnits(List<? extends ExecutionUnit> units, ExecutionUnit completedUnit) {
         for (ExecutionUnit unit : units) {
             if (unit.getQj().equals(completedUnit.getName())) {
@@ -592,34 +635,34 @@ public class SimulationController {
             }
         }
     }
-    
+
     private void resolveBusContention() {
         // Implement bus contention resolution logic
         // For example, prioritize based on instruction order or unit type
     }
-    
+
     private void updateCache() {
         // Update cache state based on memory accesses
     }
-    
+
     private void updateDisplay() {
         cycleLabel.setText("Cycle " + currentCycle);
-        
+
         // Update instruction table
         instructionTable.setItems(FXCollections.observableArrayList(instructions));
-        
+
         // Update reservation station tables
         addSubTable.setItems(FXCollections.observableArrayList(addSubStations));
         mulDivTable.setItems(FXCollections.observableArrayList(mulDivStations));
-        
+
         // Update load/store buffer tables
         loadBufferTable.setItems(FXCollections.observableArrayList(loadBuffers));
         storeBufferTable.setItems(FXCollections.observableArrayList(storeBuffers));
-        
+
         // Update register file display
         updateRegisterFileDisplay();
     }
-    
+
     private void updateRegisterFileDisplay() {
         registerFileGrid.getChildren().clear();
         for (int i = 0; i < 32; i++) {
@@ -631,13 +674,13 @@ public class SimulationController {
             registerFileGrid.add(statusLabel, 2, i);
         }
     }
-    
+
     private boolean isSimulationComplete() {
         return instructions.isEmpty() &&
-               addSubStations.stream().noneMatch(ReservationStation::isBusy) &&
-               mulDivStations.stream().noneMatch(ReservationStation::isBusy) &&
-               loadBuffers.stream().noneMatch(LoadBuffer::isBusy) &&
-               storeBuffers.stream().noneMatch(StoreBuffer::isBusy);
+                addSubStations.stream().noneMatch(ReservationStation::isBusy) &&
+                mulDivStations.stream().noneMatch(ReservationStation::isBusy) &&
+                loadBuffers.stream().noneMatch(LoadBuffer::isBusy) &&
+                storeBuffers.stream().noneMatch(StoreBuffer::isBusy);
     }
 
     private void handleConfigure() {

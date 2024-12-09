@@ -3,17 +3,24 @@ package com.tomasulo.controller;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.geometry.Insets;
+
+import java.util.HashMap;
 import java.util.Map;
 
 public class ConfigurationController {
     private TextField addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency;
     private TextField cacheSize, blockSize, hitLatency, missLatency;
     private TextField addSubStations, mulDivStations, loadBuffers, storeBuffers;
+    private Label toaster;
 
-    private Map<String, Integer> operations;
-    private Map<String, Integer> cacheParams;
-    private Map<String, Integer> bufferSizes;
-
+    public Map<String, Integer> operations;
+    public Map<String, Integer> cacheParams;
+    public Map<String, Integer> bufferSizes;
+    public ConfigurationController(){
+        operations = new HashMap<>();
+        cacheParams = new HashMap<>();
+        bufferSizes = new HashMap<>();
+    }
     public VBox createConfigView() {
         VBox root = new VBox(10);
         root.setPadding(new Insets(20));
@@ -90,9 +97,9 @@ public class ConfigurationController {
         HBox buttonBox = new HBox(10);
         Button saveButton = new Button("Save");
         saveButton.setOnAction(e -> handleSave());
-        Button cancelButton = new Button("Cancel");
-        cancelButton.setOnAction(e -> handleCancel());
-        buttonBox.getChildren().addAll(saveButton, cancelButton);
+        toaster = new Label("");
+        buttonBox.getChildren().addAll(saveButton, toaster);
+
 
         root.getChildren().add(buttonBox);
 
@@ -129,11 +136,7 @@ public class ConfigurationController {
         updateOperations();
         updateCacheParams();
         updateBufferSizes();
-        closeDialog();
-    }
-
-    private void handleCancel() {
-        closeDialog();
+        toaster.setText("Successfully configured!");
     }
 
     private void updateOperations() {

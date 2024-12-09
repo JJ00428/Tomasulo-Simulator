@@ -10,9 +10,8 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         SimulationController controller = new SimulationController();
-        Scene scene = new Scene(controller.createView(), 1200, 800);
         primaryStage.setTitle("Tomasulo Algorithm Simulator");
-        primaryStage.setScene(scene);
+        primaryStage.setScene(controller.getScene());
         primaryStage.show();
     }
 
