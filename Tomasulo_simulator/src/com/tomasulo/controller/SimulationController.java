@@ -12,6 +12,8 @@ import com.tomasulo.model.*;
 import java.lang.reflect.Array;
 import java.util.*;
 
+import static java.lang.Float.parseFloat;
+
 public class SimulationController {
     private Scene scene;
     private BorderPane root;
@@ -318,6 +320,9 @@ public class SimulationController {
         //to get tpe of opperation to know which rs or buffer to check
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
+        String dest = parts[1].replace(",", "");
+        String src1 = parts[2].replace(",", "");
+        String src2 = parts.length > 3 ? parts[3] : null;
 
 
         //is there an empty reservation station or buffer for this instruction?
@@ -326,6 +331,12 @@ public class SimulationController {
         } else if (op.equals("MUL") || op.equals("DIV")) {
             return hasAvailableStation(mulDivStations);
         } else if (op.equals("L.D")) {
+            int effectiveAddress = calculateEffectiveAddress(src1);
+            for (StoreBuffer sb : storeBuffers) {
+                if (sb.isBusy() && sb.getAddress() == effectiveAddress) {
+                    return false; //RAW
+                }
+            }
             for (LoadBuffer buffer : loadBuffers) {
                 if (!buffer.isBusy()) {
                     return true;
@@ -333,6 +344,17 @@ public class SimulationController {
             }
             return false;
         } else if (op.equals("S.D")) {
+            int effectiveAddress = calculateEffectiveAddress(dest);
+            for (LoadBuffer lb : loadBuffers) {
+                if (lb.isBusy() && lb.getAddress() == effectiveAddress) {
+                    return false;//WAR
+                }
+            }
+            for (StoreBuffer buffer : storeBuffers) {
+                if (buffer.isBusy() && buffer.getAddress() == effectiveAddress) {
+                    return false; //WAW
+                }
+            }
             for (StoreBuffer buffer : storeBuffers) {
                 if (!buffer.isBusy()) {
                     return true;
@@ -360,7 +382,7 @@ public class SimulationController {
         } else if (op.equals("S.D")) {
             issueToStoreBuffer(instruction, src1, dest);
         }
-
+        
         instruction.setIssueTime(currentCycle);
     }
 
@@ -392,6 +414,9 @@ public class SimulationController {
 
     private void issueToAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = firstAvailableStation(addSubStations);
+
+        if (rs == null) return;
+
         rs.setInstruction(instruction);
         rs.setBusy(true);
         rs.setOperation(op);
@@ -403,7 +428,7 @@ public class SimulationController {
         registerFile.setStatus(dest, rs.getName());
         instruction.setIssueTime(currentCycle);
     }
-
+    
     private void issueToMulDivStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = firstAvailableStation(mulDivStations);
         rs.setInstruction(instruction);
@@ -418,25 +443,47 @@ public class SimulationController {
         instruction.setIssueTime(currentCycle);
     }
 
-    private void issueToLoadBuffer(InstructionEntry instruction, String dest, String address) {
+    private int calculateEffectiveAddress(String addressString) {
+        if (addressString.contains("(")) {
+            String[] parts = addressString.split("[()]");
+            int offset = Integer.parseInt(parts[0]); // Offset remains an integer
+            String register = parts[1];
+
+            // Convert register value to double and cast to int
+            double registerValue = Double.parseDouble(registerFile.getValue(register));
+            int baseAddress = (int) Math.floor(registerValue);
+
+            return baseAddress + offset;
+        } else {
+            return Integer.parseInt(addressString); // For standalone addresses
+        }
+    }
+
+
+
+    private void issueToLoadBuffer(InstructionEntry instruction, String dest, String addressString) {
         LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
+        if (lb == null) return;
         lb.setInstruction(instruction);
         lb.setBusy(true);
-        lb.setAddress(Integer.parseInt(address));
+        int effectiveAddress = calculateEffectiveAddress(addressString);
+        lb.setAddress(effectiveAddress);
         registerFile.setStatus(dest, lb.getName());
         instruction.setIssueTime(currentCycle);
     }
 
-    private void issueToStoreBuffer(InstructionEntry instruction, String src, String address) {
+    private void issueToStoreBuffer(InstructionEntry instruction, String src, String addressString) {
         StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
+        if (sb == null) return;
         sb.setInstruction(instruction);
         sb.setBusy(true);
-        sb.setAddress(Integer.parseInt(address));
+        int effectiveAddress = calculateEffectiveAddress(addressString);
+        sb.setAddress(effectiveAddress);
         sb.setValue(Double.parseDouble(registerFile.getValue(src)));
         sb.setQ(registerFile.getStatus(src));
         instruction.setIssueTime(currentCycle);
     }
-
+    
     private void executeInstructions() {
         executeReservationStations(addSubStations);
         executeReservationStations(mulDivStations);
@@ -460,7 +507,7 @@ public class SimulationController {
             }
         }
     }
-
+    
     private void executeLoadBuffers() {
         for (LoadBuffer lb : loadBuffers) {
             if (lb.isBusy() && !lb.isReadyToWrite()) {
@@ -481,7 +528,7 @@ public class SimulationController {
             }
         }
     }
-
+    
     private void executeStoreBuffers() {
         for (StoreBuffer sb : storeBuffers) {
             if (sb.isBusy() && sb.getQ().isEmpty()) {
@@ -541,13 +588,13 @@ public class SimulationController {
 
     private void writeResults() {
         List<String> resultsToWrite = new ArrayList<>();
-
+        
         //get all results ready to write
         collectReadyResults(addSubStations, resultsToWrite);
         collectReadyResults(mulDivStations, resultsToWrite);
         collectReadyResults(loadBuffers, resultsToWrite);
         collectReadyResults(storeBuffers, resultsToWrite);
-
+        
         //write them
         for (String result : resultsToWrite) {
             writeResult(result);
@@ -596,16 +643,16 @@ public class SimulationController {
 
 
 
-
-
+    
+    
     private void updateDependentUnits(ExecutionUnit completedUnit) {
         //update register file
         registerFile.clearStatus(completedUnit.getName());
-
+        
         //give value to all rs that need it
         updateWaitingUnits(addSubStations, completedUnit);
         updateWaitingUnits(mulDivStations, completedUnit);
-
+        
         //give value to all store that need it
         for (StoreBuffer sb : storeBuffers) {
             if (sb.getQ().equals(completedUnit.getName())) {
@@ -614,7 +661,7 @@ public class SimulationController {
             }
         }
     }
-
+    
     private void updateWaitingUnits(List<? extends ExecutionUnit> units, ExecutionUnit completedUnit) {
         for (ExecutionUnit unit : units) {
             if (unit.getQj().equals(completedUnit.getName())) {
@@ -627,34 +674,34 @@ public class SimulationController {
             }
         }
     }
-
+    
     private void resolveBusContention() {
         // Implement bus contention resolution logic
         // For example, prioritize based on instruction order or unit type
     }
-
+    
     private void updateCache() {
         // Update cache state based on memory accesses
     }
-
+    
     private void updateDisplay() {
         cycleLabel.setText("Cycle " + currentCycle);
-
+        
         // Update instruction table
         instructionTable.setItems(FXCollections.observableArrayList(instructions));
-
+        
         // Update reservation station tables
         addSubTable.setItems(FXCollections.observableArrayList(addSubStations));
         mulDivTable.setItems(FXCollections.observableArrayList(mulDivStations));
-
+        
         // Update load/store buffer tables
         loadBufferTable.setItems(FXCollections.observableArrayList(loadBuffers));
         storeBufferTable.setItems(FXCollections.observableArrayList(storeBuffers));
-
+        
         // Update register file display
         updateRegisterFileDisplay();
     }
-
+    
     private void updateRegisterFileDisplay() {
         registerFileGrid.getChildren().clear();
         for (int i = 0; i < 32; i++) {
@@ -666,7 +713,7 @@ public class SimulationController {
             registerFileGrid.add(statusLabel, 2, i);
         }
     }
-
+    
     private boolean isSimulationComplete() {
         return instructions.isEmpty() &&
                 addSubStations.stream().noneMatch(ReservationStation::isBusy) &&
