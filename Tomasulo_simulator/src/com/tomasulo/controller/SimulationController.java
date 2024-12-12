@@ -1,5 +1,6 @@
 package com.tomasulo.controller;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.collections.FXCollections;
@@ -41,6 +42,8 @@ public class SimulationController {
     private List<StoreBuffer> storeBuffers = new ArrayList<>();
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
+
+    private int loop;
 
     public SimulationController() {
         root = new BorderPane();
@@ -139,18 +142,21 @@ public class SimulationController {
     private void setupInstructionTable() {
         TableColumn<InstructionEntry, Integer> iterationCol = new TableColumn<>("Iteration #");
         TableColumn<InstructionEntry, String> instructionCol = new TableColumn<>("Instruction");
+        TableColumn<InstructionEntry, String> codeCol = new TableColumn<>("Code"); // New column for code
         TableColumn<InstructionEntry, Integer> issueCol = new TableColumn<>("Issue");
         TableColumn<InstructionEntry, Integer> executeCol = new TableColumn<>("Execute");
         TableColumn<InstructionEntry, Integer> writeCol = new TableColumn<>("Write Result");
 
         iterationCol.setCellValueFactory(cellData -> cellData.getValue().iterationProperty().asObject());
         instructionCol.setCellValueFactory(cellData -> cellData.getValue().instructionProperty());
+        codeCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getCode())); // Set code column
         issueCol.setCellValueFactory(cellData -> cellData.getValue().issueTimeProperty().asObject());
         executeCol.setCellValueFactory(cellData -> cellData.getValue().executeTimeProperty().asObject());
         writeCol.setCellValueFactory(cellData -> cellData.getValue().writeTimeProperty().asObject());
 
-        instructionTable.getColumns().addAll(iterationCol, instructionCol, issueCol, executeCol, writeCol);
+        instructionTable.getColumns().addAll(iterationCol, instructionCol, codeCol, issueCol, executeCol, writeCol);
     }
+
 
     private void setupReservationStationTable(TableView<ReservationStation> table) {
         TableColumn<ReservationStation, String> nameCol = new TableColumn<>("Name");
@@ -203,6 +209,7 @@ public class SimulationController {
     }
 
     private void setupInitialValues() {
+        loop=1;
         // Set up default operations
         operations.put("ADD", 2);
         operations.put("SUB", 2);
@@ -285,20 +292,30 @@ public class SimulationController {
         currentCycle = 0;
         currentInstruction = 0;
         instructions.clear();
+        instructionTable.getItems().clear();
         setupInitialValues();
         updateDisplay();
     }
+
 
 
     private void handleLoadInstructions() {
         String[] lines = codeInput.getText().split("\n");
         instructions.clear();
         for (int i = 0; i < lines.length; i++) {
-            instructions.add(new InstructionEntry(lines[i].trim(), i + 1));
+            instructions.add(new InstructionEntry(lines[i].trim(), loop, lines[i].trim())); // Initialize iteration to 1
         }
         currentInstruction = 0;
-        updateDisplay();
+
+        //to know they've been loaded successfully
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Instructions Loaded");
+        alert.setHeaderText(null);
+        alert.setContentText("Instructions have been successfully loaded.");
+        alert.showAndWait();
     }
+
+
 
     private void executeOneCycle() {
         //Issue
@@ -320,9 +337,6 @@ public class SimulationController {
 
         //Write
         writeResults();
-
-        //if 2 writes happen at the same time
-        resolveBusContention();
 
         // Update cache status
         updateCache();
@@ -399,7 +413,9 @@ public class SimulationController {
         return false;
     }
 
-    private void issueInstruction(InstructionEntry instruction) {
+    private void issueInstruction(InstructionEntry instruction1) {
+        instructions.add(new InstructionEntry(instruction1.getInstruction(),loop,null));
+        InstructionEntry instruction = instructions.getLast();
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
         if (!(op.equals("BNE") || op.equals("BEQ"))) {
@@ -424,13 +440,30 @@ public class SimulationController {
             issueToBranch(instruction, op, dest, src1, src2);
         }
 
+
+
+        // Set issue time for the instruction
         instruction.setIssueTime(currentCycle);
+
+        // Add the issued instruction to the display table
+//        if (!instructionTable.getItems().contains(instruction)) {
+        instructionTable.getItems().add(instruction);
+//        }
+
+        updateDisplay();
     }
+
 
 
     private void issueToBranch(InstructionEntry instruction, String op, String src1, String src2, String target) {
         // Convert target to an address or instruction index
-        int targetAddress = getAddressFromLabel(target); // Simplified; adjust as needed
+        int targetAddress = getAddressFromLabel(target);
+
+        if (targetAddress == -1) {
+            // Handle the case where the label is not found
+            System.err.println("Error: Label " + target + " not found.");
+            return;
+        }
 
         // Check the condition
         boolean conditionMet = false;
@@ -440,24 +473,43 @@ public class SimulationController {
             conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
         }
 
-        System.out.println(conditionMet);
         if (conditionMet) {
+            // Set current instruction to the target of the branch
             currentInstruction = targetAddress;
+
+            // Increment the iteration count for the target instruction and re-issue it
+//            InstructionEntry loopInstruction = instructions.get(targetAddress);
+//            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
+            loop ++;
+
+
         } else {
+            // Move to the next instruction
             currentInstruction++;
         }
 
+        // Set issue time for the current instruction
         instruction.setIssueTime(currentCycle);
+        updateDisplay();
     }
+
+
+
 
     private int getAddressFromLabel(String label) {
         for (int i = 0; i < instructions.size(); i++) {
-            if (instructions.get(i).getInstruction().startsWith(label + ":")) {
-                return i;
+            // Use a regular expression to remove any label followed by a colon
+            String instruction = instructions.get(i).getInstruction();
+            if (instruction.contains(":")) {
+                String[] parts = instruction.split(":");
+                if (parts.length > 0 && parts[0].trim().equals(label.trim())) {
+                    return i;
+                }
             }
         }
         return -1; // Return -1 if the label is not found
     }
+
 
     private ReservationStation firstAvailableStation(List<ReservationStation> stations) {
         for (ReservationStation station : stations) {
@@ -773,11 +825,6 @@ public class SimulationController {
         }
     }
 
-    private void resolveBusContention() {
-        // Implement bus contention resolution logic
-        // For example, prioritize based on instruction order or unit type
-    }
-
     private void updateCache() {
         // Update cache state based on memory accesses
     }
@@ -785,20 +832,16 @@ public class SimulationController {
     private void updateDisplay() {
         cycleLabel.setText("Cycle " + currentCycle);
 
-        // Update instruction table
-        instructionTable.setItems(FXCollections.observableArrayList(instructions));
-
-        // Update reservation station tables
+        // Update the reservation station and buffer tables
         addSubTable.setItems(FXCollections.observableArrayList(addSubStations));
         mulDivTable.setItems(FXCollections.observableArrayList(mulDivStations));
 
-        // Update load/store buffer tables
         loadBufferTable.setItems(FXCollections.observableArrayList(loadBuffers));
         storeBufferTable.setItems(FXCollections.observableArrayList(storeBuffers));
 
-        // Update register file display
         updateRegisterFileDisplay();
     }
+
 
     private void updateRegisterFileDisplay() {
         registerFileGrid.getChildren().clear();
@@ -812,34 +855,7 @@ public class SimulationController {
         }
     }
 
-    private boolean isSimulationComplete() {
-        return instructions.isEmpty() &&
-                addSubStations.stream().noneMatch(ReservationStation::isBusy) &&
-                mulDivStations.stream().noneMatch(ReservationStation::isBusy) &&
-                loadBuffers.stream().noneMatch(LoadBuffer::isBusy) &&
-                storeBuffers.stream().noneMatch(StoreBuffer::isBusy);
-    }
 
-    private void updateSimulatorConfiguration() {
-        // Update cache
-        cache = new Cache(
-                cacheParams.get("size"),
-                cacheParams.get("blockSize"),
-                cacheParams.get("hitLatency"),
-                cacheParams.get("missLatency")
-        );
-
-        // Update buffer sizes
-        updateBufferSizes(addSubStations, bufferSizes.get("addSub"));
-        updateBufferSizes(mulDivStations, bufferSizes.get("mulDiv"));
-        updateBufferSizes(loadBuffers, bufferSizes.get("load"));
-        updateBufferSizes(storeBuffers, bufferSizes.get("store"));
-
-        // Latencies are already updated in the map
-
-        // Refresh the display
-        updateDisplay();
-    }
 
     private <T> void updateBufferSizes(List<T> buffer, int newSize) {
         while (buffer.size() > newSize) {
@@ -856,19 +872,6 @@ public class SimulationController {
         }
     }
 
-//    private interface ExecutionUnit {
-//        String getName();
-//        boolean isReadyToWrite();
-//        void clear();
-//        String getQj();
-//        String getQk();
-//        void setVj(String value);
-//        void setVk(String value);
-//        void setQj(String value);
-//        void setQk(String value);
-//        String getResult();
-//        boolean isBusy();
-//    }
 
 
 }

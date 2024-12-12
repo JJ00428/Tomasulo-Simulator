@@ -8,13 +8,15 @@ public class InstructionEntry {
     private final IntegerProperty issueTime;
     private final IntegerProperty executeTime;
     private final IntegerProperty writeTime;
+    private final String code;
 
-    public InstructionEntry(String inst, int itr) {
+    public InstructionEntry(String inst, int itr, String code) {
         this.instruction = new SimpleStringProperty(inst);
         this.iteration = new SimpleIntegerProperty(itr);
         this.issueTime = new SimpleIntegerProperty(-1);
         this.executeTime = new SimpleIntegerProperty(-1);
         this.writeTime = new SimpleIntegerProperty(-1);
+        this.code = code;
     }
 
     public String getInstruction() { return instruction.get(); }
@@ -36,4 +38,5 @@ public class InstructionEntry {
     public int getWriteTime() { return writeTime.get(); }
     public void setWriteTime(int value) { writeTime.set(value); }
     public IntegerProperty writeTimeProperty() { return writeTime; }
+    public String getCode() { return code;}
 }
