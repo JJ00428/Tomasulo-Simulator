@@ -130,12 +130,12 @@ public class SimulationController {
         HBox buffersBox = new HBox(10);
         VBox loadBox = new VBox(5);
         loadBufferTable = new TableView<>();
-        setupLoadBufferTable();
+        setupLoadBufferTable(loadBufferTable);
         loadBox.getChildren().addAll(new Label("Load Buffers"), loadBufferTable);
 
         VBox storeBox = new VBox(5);
         storeBufferTable = new TableView<>();
-        setupStoreBufferTable();
+        setupStoreBufferTable(storeBufferTable);
         storeBox.getChildren().addAll(new Label("Store Buffers"), storeBufferTable);
 
         buffersBox.getChildren().addAll(loadBox, storeBox);
@@ -159,12 +159,12 @@ public class SimulationController {
         HBox intBuffersBox = new HBox(10);
         VBox intLoadBox = new VBox(5);
         intLoadBufferTable = new TableView<>();
-        setupLoadBufferTable();
+        setupLoadBufferTable(intLoadBufferTable);
         intLoadBox.getChildren().addAll(new Label("Integer Load Buffers"), intLoadBufferTable);
 
         VBox intStoreBox = new VBox(5);
         intStoreBufferTable = new TableView<>();
-        setupStoreBufferTable();
+        setupStoreBufferTable(intStoreBufferTable);
         intStoreBox.getChildren().addAll(new Label("Integer Store Buffers"), intStoreBufferTable);
 
         intBuffersBox.getChildren().addAll(intLoadBox, intStoreBox);
@@ -255,7 +255,7 @@ public class SimulationController {
         table.getColumns().addAll(nameCol, busyCol, opCol, vjCol, vkCol, qjCol, qkCol, cyclesCol);
     }
 
-    private void setupLoadBufferTable() {
+    private void setupLoadBufferTable(TableView<LoadBuffer> table) {
         TableColumn<LoadBuffer, String> nameCol = new TableColumn<>("Name");
         TableColumn<LoadBuffer, Boolean> busyCol = new TableColumn<>("Busy");
         TableColumn<LoadBuffer, Integer> addressCol = new TableColumn<>("Address");
@@ -264,10 +264,10 @@ public class SimulationController {
         busyCol.setCellValueFactory(cellData -> cellData.getValue().busyProperty());
         addressCol.setCellValueFactory(cellData -> cellData.getValue().addressProperty().asObject());
 
-        loadBufferTable.getColumns().addAll(nameCol, busyCol, addressCol);
+        table.getColumns().addAll(nameCol, busyCol, addressCol);
     }
 
-    private void setupStoreBufferTable() {
+    private void setupStoreBufferTable(TableView<StoreBuffer> table) {
         TableColumn<StoreBuffer, String> nameCol = new TableColumn<>("Name");
         TableColumn<StoreBuffer, Boolean> busyCol = new TableColumn<>("Busy");
         TableColumn<StoreBuffer, Integer> addressCol = new TableColumn<>("Address");
@@ -280,8 +280,9 @@ public class SimulationController {
         valueCol.setCellValueFactory(cellData -> cellData.getValue().valueProperty().asObject());
         qCol.setCellValueFactory(cellData -> cellData.getValue().qProperty());
 
-        storeBufferTable.getColumns().addAll(nameCol, busyCol, addressCol, valueCol, qCol);
+        table.getColumns().addAll(nameCol, busyCol, addressCol, valueCol, qCol);
     }
+
 
     private void setupInitialValues() {
         loop = 1;
@@ -972,7 +973,7 @@ public class SimulationController {
         intStoreBufferTable.setItems(FXCollections.observableArrayList(intStoreBuffers));
 
         // Add branch stations update if there's a table for it in your UI
-        // branchTable.setItems(FXCollections.observableArrayList(branchStations));
+         branchTable.setItems(FXCollections.observableArrayList(branchStations));
 
         updateRegisterFileDisplay();
     }
@@ -1007,6 +1008,7 @@ public class SimulationController {
 
         intRegisterFileGrid.setStyle("-fx-grid-lines-visible: true; -fx-padding: 5;");
     }
+
 
 
 
