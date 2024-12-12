@@ -587,34 +587,45 @@ public class SimulationController {
 
 
     private void writeResults() {
-        List<String> resultsToWrite = new ArrayList<>();
-        
-        //get all results ready to write
-        collectReadyResults(addSubStations, resultsToWrite);
-        collectReadyResults(mulDivStations, resultsToWrite);
-        collectReadyResults(loadBuffers, resultsToWrite);
-        collectReadyResults(storeBuffers, resultsToWrite);
-        
-        //write them
-        for (String result : resultsToWrite) {
-            writeResult(result);
+        List<ExecutionUnit> readyUnits = new ArrayList<>();
+
+        //get all units ready to write
+        collectReadyUnits(addSubStations, readyUnits);
+        collectReadyUnits(mulDivStations, readyUnits);
+        collectReadyUnits(loadBuffers, readyUnits);
+        collectReadyUnits(storeBuffers, readyUnits);
+
+        //fix if there are multiple registers ready to write use FIFO
+        ExecutionUnit earliestUnit = null;
+        int earliestIssueTime = Integer.MAX_VALUE;
+
+        for (ExecutionUnit unit : readyUnits) {
+            int issueTime = unit.getInstruction().getIssueTime();
+            if (issueTime < earliestIssueTime) {
+                earliestIssueTime = issueTime;
+                earliestUnit = unit;
+            }
+        }
+
+        // Write result for the earliest unit (if any)
+        if (earliestUnit != null) {
+            writeResult(earliestUnit);
         }
     }
 
 
-    private void collectReadyResults(List<? extends ExecutionUnit> units, List<String> results) {
+
+    private void collectReadyUnits(List<? extends ExecutionUnit> units, List<ExecutionUnit> readyUnits) {
         for (ExecutionUnit unit : units) {
             if (unit.isReadyToWrite()) {
-                if (unit.getInstruction().getExecuteTime() == currentCycle) {
-                    continue; //skip
-                }
-                results.add(unit.getName());
+                readyUnits.add(unit);
             }
         }
     }
 
-    private void writeResult(String unitName) {
-        ExecutionUnit unit = findExecutionUnit(unitName);
+
+    private void writeResult(ExecutionUnit unit) {
+//        ExecutionUnit unit = findExecutionUnit(unitName);
         if (unit != null) {
             //give value to all that needs them/ put on bus
             updateDependentUnits(unit);
@@ -625,21 +636,21 @@ public class SimulationController {
             unit.clear();
         }
     }
-    private ExecutionUnit findExecutionUnit(String name) {
-        for (ReservationStation unit : addSubStations) {
-            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-        }
-        for (ReservationStation unit : mulDivStations) {
-            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-        }
-        for (LoadBuffer unit : loadBuffers) {
-            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-        }
-        for (StoreBuffer unit : storeBuffers) {
-            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-        }
-        return null;
-    }
+//    private ExecutionUnit findExecutionUnit(String name) {
+//        for (ReservationStation unit : addSubStations) {
+//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
+//        }
+//        for (ReservationStation unit : mulDivStations) {
+//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
+//        }
+//        for (LoadBuffer unit : loadBuffers) {
+//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
+//        }
+//        for (StoreBuffer unit : storeBuffers) {
+//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
+//        }
+//        return null;
+//    }
 
 
 
