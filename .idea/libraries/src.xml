@@ -1,14 +1,14 @@
 <component name="libraryTable">
   <library name="src">
     <CLASSES>
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx-swt.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.base.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.controls.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.fxml.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.graphics.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.media.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.swing.jar!/" />
-      <root url="jar://C:/Program Files/javafx-sdk-23.0.1/lib/javafx.web.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx-swt.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.base.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.controls.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.fxml.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.graphics.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.media.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.swing.jar!/" />
+      <root url="jar://$PROJECT_DIR$/out/production/Tomasulo-Simulator2/javafx.web.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
