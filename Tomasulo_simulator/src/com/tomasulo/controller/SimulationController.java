@@ -5,12 +5,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.collections.FXCollections;
 import javafx.scene.Scene;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 import com.tomasulo.model.*;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 import static java.lang.Float.parseFloat;
@@ -26,7 +23,14 @@ public class SimulationController {
     private TableView<ReservationStation> mulDivTable;
     private TableView<LoadBuffer> loadBufferTable;
     private TableView<StoreBuffer> storeBufferTable;
+    private TableView<ReservationStation> intAddSubTable; // Integer Add/Sub table
+    private TableView<ReservationStation> intMulDivTable; // Integer Mul/Div table
+    private TableView<LoadBuffer> intLoadBufferTable; // Integer Load buffer table
+    private TableView<StoreBuffer> intStoreBufferTable; // Integer Store buffer table
     private GridPane registerFileGrid;
+    private GridPane intRegisterFileGrid; // Integer register file grid
+    private TableView<BranchStation> branchTable;
+    private RegisterFile intRegisterFile;
     private Label cycleLabel;
     private TextArea codeInput;
 
@@ -40,9 +44,13 @@ public class SimulationController {
     private List<ReservationStation> mulDivStations = new ArrayList<>();
     private List<LoadBuffer> loadBuffers = new ArrayList<>();
     private List<StoreBuffer> storeBuffers = new ArrayList<>();
+    private List<ReservationStation> intAddSubStations = new ArrayList<>(); // Integer Add/Sub stations
+    private List<ReservationStation> intMulDivStations = new ArrayList<>(); // Integer Mul/Div stations
+    private List<LoadBuffer> intLoadBuffers = new ArrayList<>(); // Integer Load buffers
+    private List<StoreBuffer> intStoreBuffers = new ArrayList<>(); // Integer Store buffers
+    private List<BranchStation> branchStations = new ArrayList<>(); // Branch stations
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
-
     private int loop;
 
     public SimulationController() {
@@ -110,6 +118,15 @@ public class SimulationController {
 
         stationsBox.getChildren().addAll(addSubBox, mulDivBox);
 
+
+        VBox branchBox = new VBox(5);
+        branchTable = new TableView<>();
+        setupBranchStationTable(branchTable);
+        branchBox.getChildren().addAll(new Label("Branch Stations"), branchTable);
+
+        // Add branchBox to your layout
+        stationsBox.getChildren().add(branchBox);
+
         HBox buffersBox = new HBox(10);
         VBox loadBox = new VBox(5);
         loadBufferTable = new TableView<>();
@@ -124,20 +141,56 @@ public class SimulationController {
         buffersBox.getChildren().addAll(loadBox, storeBox);
 
         centerBox.getChildren().addAll(instructionTable, stationsBox, buffersBox);
+
+        // Integer-specific tables
+        HBox intStationsBox = new HBox(10);
+        VBox intAddSubBox = new VBox(5);
+        intAddSubTable = new TableView<>();
+        setupReservationStationTable(intAddSubTable);
+        intAddSubBox.getChildren().addAll(new Label("Integer Add/Sub Reservation Stations"), intAddSubTable);
+
+        VBox intMulDivBox = new VBox(5);
+        intMulDivTable = new TableView<>();
+        setupReservationStationTable(intMulDivTable);
+        intMulDivBox.getChildren().addAll(new Label("Integer Mul/Div Reservation Stations"), intMulDivTable);
+
+        intStationsBox.getChildren().addAll(intAddSubBox, intMulDivBox);
+
+        HBox intBuffersBox = new HBox(10);
+        VBox intLoadBox = new VBox(5);
+        intLoadBufferTable = new TableView<>();
+        setupLoadBufferTable();
+        intLoadBox.getChildren().addAll(new Label("Integer Load Buffers"), intLoadBufferTable);
+
+        VBox intStoreBox = new VBox(5);
+        intStoreBufferTable = new TableView<>();
+        setupStoreBufferTable();
+        intStoreBox.getChildren().addAll(new Label("Integer Store Buffers"), intStoreBufferTable);
+
+        intBuffersBox.getChildren().addAll(intLoadBox, intStoreBox);
+
+        centerBox.getChildren().addAll(intStationsBox, intBuffersBox);
         root.setCenter(centerBox);
 
         // Right
-        VBox rightBox = new VBox(10);
+        HBox rightBox = new HBox(10);
         registerFileGrid = new GridPane();
         registerFileGrid.setHgap(5);
         registerFileGrid.setVgap(5);
-        rightBox.getChildren().addAll(new Label("Register File"), registerFileGrid);
+
+        // Integer register file grid
+        intRegisterFileGrid = new GridPane();
+        intRegisterFileGrid.setHgap(5);
+        intRegisterFileGrid.setVgap(5);
+
+        rightBox.getChildren().addAll(new Label("Register File"), registerFileGrid, new Label("Integer Register File"), intRegisterFileGrid);
         root.setRight(rightBox);
 
         setupInitialValues();
 
         return root;
     }
+
 
     private void setupInstructionTable() {
         TableColumn<InstructionEntry, Integer> iterationCol = new TableColumn<>("Iteration #");
@@ -180,6 +233,28 @@ public class SimulationController {
         table.getColumns().addAll(nameCol, busyCol, opCol, vjCol, vkCol, qjCol, qkCol, cyclesCol);
     }
 
+    private void setupBranchStationTable(TableView<BranchStation> table) {
+        TableColumn<BranchStation, String> nameCol = new TableColumn<>("Name");
+        TableColumn<BranchStation, Boolean> busyCol = new TableColumn<>("Busy");
+        TableColumn<BranchStation, String> opCol = new TableColumn<>("Op");
+        TableColumn<BranchStation, String> vjCol = new TableColumn<>("Vj");
+        TableColumn<BranchStation, String> vkCol = new TableColumn<>("Vk");
+        TableColumn<BranchStation, String> qjCol = new TableColumn<>("Qj");
+        TableColumn<BranchStation, String> qkCol = new TableColumn<>("Qk");
+        TableColumn<BranchStation, Integer> cyclesCol = new TableColumn<>("Cycles");
+
+        nameCol.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        busyCol.setCellValueFactory(cellData -> cellData.getValue().busyProperty());
+        opCol.setCellValueFactory(cellData -> cellData.getValue().operationProperty());
+        vjCol.setCellValueFactory(cellData -> cellData.getValue().vjProperty());
+        vkCol.setCellValueFactory(cellData -> cellData.getValue().vkProperty());
+        qjCol.setCellValueFactory(cellData -> cellData.getValue().qjProperty());
+        qkCol.setCellValueFactory(cellData -> cellData.getValue().qkProperty());
+        cyclesCol.setCellValueFactory(cellData -> cellData.getValue().cyclesProperty().asObject());
+
+        table.getColumns().addAll(nameCol, busyCol, opCol, vjCol, vkCol, qjCol, qkCol, cyclesCol);
+    }
+
     private void setupLoadBufferTable() {
         TableColumn<LoadBuffer, String> nameCol = new TableColumn<>("Name");
         TableColumn<LoadBuffer, Boolean> busyCol = new TableColumn<>("Busy");
@@ -209,7 +284,7 @@ public class SimulationController {
     }
 
     private void setupInitialValues() {
-        loop=1;
+        loop = 1;
         // Set up default operations
         operations.put("ADD", 2);
         operations.put("SUB", 2);
@@ -249,21 +324,27 @@ public class SimulationController {
                     config.cacheParams.get("missLatency")
             );
 
-
-        // Initialize register file
+        // Initialize register files
         registerFile = new RegisterFile(32);
+        intRegisterFile = new RegisterFile(32);
 
         addSubStations.clear();
         mulDivStations.clear();
         loadBuffers.clear();
         storeBuffers.clear();
-
+        intAddSubStations.clear();
+        intMulDivStations.clear();
+        intLoadBuffers.clear();
+        intStoreBuffers.clear();
+        branchStations.clear();
 
         int numAddSub = config.bufferSizes.getOrDefault("addSub", 3);
         int numMulDiv = config.bufferSizes.getOrDefault("mulDiv", 3);
         int numLoad = config.bufferSizes.getOrDefault("load", 3);
         int numStore = config.bufferSizes.getOrDefault("store", 3);
-        // Initialize reservation stations
+        int numBranch = config.bufferSizes.getOrDefault("branch", 2);
+
+        // Initialize floating-point reservation stations
         for (int i = 0; i < numAddSub; i++) {
             addSubStations.add(new ReservationStation("Add" + (i + 1)));
         }
@@ -271,16 +352,32 @@ public class SimulationController {
             mulDivStations.add(new ReservationStation("Mul" + (i + 1)));
         }
 
+        // Initialize integer reservation stations
+        for (int i = 0; i < numAddSub; i++) {
+            intAddSubStations.add(new ReservationStation("IntAdd" + (i + 1)));
+        }
+        for (int i = 0; i < numMulDiv; i++) {
+            intMulDivStations.add(new ReservationStation("IntMul" + (i + 1)));
+        }
+
         // Initialize load/store buffers
         for (int i = 0; i < numLoad; i++) {
             loadBuffers.add(new LoadBuffer("Load" + (i + 1)));
+            intLoadBuffers.add(new LoadBuffer("IntLoad" + (i + 1)));
         }
         for (int i = 0; i < numStore; i++) {
             storeBuffers.add(new StoreBuffer("Store" + (i + 1)));
+            intStoreBuffers.add(new StoreBuffer("IntStore" + (i + 1)));
+        }
+
+        // Initialize branch stations
+        for (int i = 0; i < numBranch; i++) {
+            branchStations.add(new BranchStation("Branch" + (i + 1)));
         }
 
         updateDisplay();
     }
+
 
     private void handleStep() {
         currentCycle++;
@@ -298,7 +395,6 @@ public class SimulationController {
     }
 
 
-
     private void handleLoadInstructions() {
         String[] lines = codeInput.getText().split("\n");
         instructions.clear();
@@ -314,7 +410,6 @@ public class SimulationController {
         alert.setContentText("Instructions have been successfully loaded.");
         alert.showAndWait();
     }
-
 
 
     private void executeOneCycle() {
@@ -367,14 +462,16 @@ public class SimulationController {
 
 
         //is there an empty reservation station or buffer for this instruction?
-        if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") ||
-                op.equals("DADDI") || op.equals("DSUBI") || op.equals("ADD.D") || op.equals("ADD.S") ||
-                op.equals("SUB.D") || op.equals("SUB.S")) {
+        if (op.equals("ADD.D") || op.equals("ADD.S") || op.equals("SUB.D") || op.equals("SUB.S")) {
             return hasAvailableStation(addSubStations);
-        } else if (op.equals("MUL") || op.equals("DIV") || op.equals("MUL.D") || op.equals("MUL.S") ||
-                op.equals("DIV.D") || op.equals("DIV.S")) {
+        } else if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") ||
+                op.equals("DADDI") || op.equals("DSUBI")) {
+            return hasAvailableStation(intAddSubStations);
+        } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
             return hasAvailableStation(mulDivStations);
-        } else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
+        } else if (op.equals("MUL") || op.equals("DIV")){
+            return hasAvailableStation(intMulDivStations);
+        }else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
             int effectiveAddress = calculateEffectiveAddress(src1);
             for (StoreBuffer sb : storeBuffers) {
                 if (sb.isBusy() && sb.getAddress() == effectiveAddress) {
@@ -414,33 +511,31 @@ public class SimulationController {
     }
 
     private void issueInstruction(InstructionEntry instruction1) {
-        instructions.add(new InstructionEntry(instruction1.getInstruction(),loop,null));
-        InstructionEntry instruction = instructions.getLast();
+        instructions.add(new InstructionEntry(instruction1.getInstruction(), loop, null));
+        InstructionEntry instruction = instructions.get(instructions.size() - 1);
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
-        if (!(op.equals("BNE") || op.equals("BEQ"))) {
-            op = op.replaceAll(".*:", "");
-        }
+        op = op.replaceAll(".*:", "");
         String dest = parts[1].replace(",", "");
         String src1 = parts.length > 2 ? parts[2].replace(",", "") : "";
         String src2 = parts.length > 3 ? parts[3].replace(",", "") : "";
 
         if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") ||
-                op.equals("DADDI") || op.equals("DSUBI") || op.equals("ADD.D") || op.equals("ADD.S") ||
-                op.equals("SUB.D") || op.equals("SUB.S")) {
+                op.equals("DADDI") || op.equals("DSUBI")) {
+            issueToIntAddSubStation(instruction, op, dest, src1, src2);
+        } else if (op.equals("MUL") || op.equals("DIV")) {
+            issueToIntMulDivStation(instruction, op, dest, src1, src2);
+        } else if (op.equals("ADD.D") || op.equals("ADD.S") || op.equals("SUB.D") || op.equals("SUB.S")) {
             issueToAddSubStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("MUL") || op.equals("DIV") || op.equals("MUL.D") || op.equals("MUL.S") ||
-                op.equals("DIV.D") || op.equals("DIV.S")) {
+        } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
             issueToMulDivStation(instruction, op, dest, src1, src2);
         } else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
             issueToLoadBuffer(instruction, dest, src1);
         } else if (op.equals("S.D") || op.equals("SW") || op.equals("S.S")) {
             issueToStoreBuffer(instruction, src1, dest);
-        } else if (op.equals("BNE") || op.equals("BEQ")) {
+        } else if (op.equals("BEQ") || op.equals("BNE")) {
             issueToBranch(instruction, op, dest, src1, src2);
         }
-
-
 
         // Set issue time for the instruction
         instruction.setIssueTime(currentCycle);
@@ -452,7 +547,6 @@ public class SimulationController {
 
         updateDisplay();
     }
-
 
 
     private void issueToBranch(InstructionEntry instruction, String op, String src1, String src2, String target) {
@@ -480,7 +574,7 @@ public class SimulationController {
             // Increment the iteration count for the target instruction and re-issue it
 //            InstructionEntry loopInstruction = instructions.get(targetAddress);
 //            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
-            loop ++;
+            loop++;
 
 
         } else {
@@ -492,8 +586,6 @@ public class SimulationController {
         instruction.setIssueTime(currentCycle);
         updateDisplay();
     }
-
-
 
 
     private int getAddressFromLabel(String label) {
@@ -572,6 +664,41 @@ public class SimulationController {
         registerFile.setStatus(dest, rs.getName());
         instruction.setIssueTime(currentCycle);
     }
+
+    private void issueToIntAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
+        ReservationStation rs = firstAvailableStation(intAddSubStations);
+
+        if (rs == null) return;
+
+        rs.setInstruction(instruction);
+        rs.setBusy(true);
+        rs.setOperation(op);
+        rs.setVj(intRegisterFile.getValue(src1));
+        rs.setVk(src2 != null ? intRegisterFile.getValue(src2) : "");
+        rs.setQj(intRegisterFile.getStatus(src1));
+        rs.setQk(src2 != null ? intRegisterFile.getStatus(src2) : "");
+        rs.setCycles(operations.get(op));
+        intRegisterFile.setStatus(dest, rs.getName());
+        instruction.setIssueTime(currentCycle);
+    }
+
+    private void issueToIntMulDivStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
+        ReservationStation rs = firstAvailableStation(intMulDivStations);
+
+        if (rs == null) return;
+
+        rs.setInstruction(instruction);
+        rs.setBusy(true);
+        rs.setOperation(op);
+        rs.setVj(intRegisterFile.getValue(src1));
+        rs.setVk(intRegisterFile.getValue(src2));
+        rs.setQj(intRegisterFile.getStatus(src1));
+        rs.setQk(intRegisterFile.getStatus(src2));
+        rs.setCycles(operations.get(op));
+        intRegisterFile.setStatus(dest, rs.getName());
+        instruction.setIssueTime(currentCycle);
+    }
+
 
     private int calculateEffectiveAddress(String addressString) {
         if (addressString.contains("(")) {
@@ -835,9 +962,17 @@ public class SimulationController {
         // Update the reservation station and buffer tables
         addSubTable.setItems(FXCollections.observableArrayList(addSubStations));
         mulDivTable.setItems(FXCollections.observableArrayList(mulDivStations));
-
         loadBufferTable.setItems(FXCollections.observableArrayList(loadBuffers));
         storeBufferTable.setItems(FXCollections.observableArrayList(storeBuffers));
+
+        // Update integer reservation stations and buffers
+        intAddSubTable.setItems(FXCollections.observableArrayList(intAddSubStations));
+        intMulDivTable.setItems(FXCollections.observableArrayList(intMulDivStations));
+        intLoadBufferTable.setItems(FXCollections.observableArrayList(intLoadBuffers));
+        intStoreBufferTable.setItems(FXCollections.observableArrayList(intStoreBuffers));
+
+        // Add branch stations update if there's a table for it in your UI
+        // branchTable.setItems(FXCollections.observableArrayList(branchStations));
 
         updateRegisterFileDisplay();
     }
@@ -853,6 +988,24 @@ public class SimulationController {
             registerFileGrid.add(valueLabel, 1, i);
             registerFileGrid.add(statusLabel, 2, i);
         }
+
+        // Update integer register file display
+        intRegisterFileGrid.getChildren().clear();
+        for (int i = 0; i < 32; i++) {
+            Label nameLabel = new Label("R" + i);
+            Label valueLabel = new Label(intRegisterFile.getValue("R" + i));
+            Label statusLabel = new Label(intRegisterFile.getStatus("R" + i));
+
+            nameLabel.setStyle("-fx-font-weight: bold;");
+            valueLabel.setStyle("-fx-padding: 0 10 0 10;");
+            statusLabel.setStyle("-fx-padding: 0 0 0 10;");
+
+            intRegisterFileGrid.add(nameLabel, 0, i);
+            intRegisterFileGrid.add(valueLabel, 1, i);
+            intRegisterFileGrid.add(statusLabel, 2, i);
+        }
+
+        intRegisterFileGrid.setStyle("-fx-grid-lines-visible: true; -fx-padding: 5;");
     }
 
 
@@ -871,7 +1024,6 @@ public class SimulationController {
             }
         }
     }
-
 
 
 }
