@@ -1,15 +1,6 @@
 <component name="libraryTable">
   <library name="bin">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.fxml.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.media.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.controls.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.graphics.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx-swt.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.swing.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.base.jar!/" />
-      <root url="jar://$PROJECT_DIR$/Tomasulo_simulator/bin/javafx.web.jar!/" />
-    </CLASSES>
+    <CLASSES />
     <JAVADOC />
     <SOURCES />
   </library>

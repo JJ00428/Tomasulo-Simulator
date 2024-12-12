@@ -52,6 +52,8 @@ public class SimulationController {
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
     private int loop;
+    private Memory memory;
+    private TableView<Memory.MemoryEntry> memoryTable;
 
     public SimulationController() {
         root = new BorderPane();
@@ -187,6 +189,7 @@ public class SimulationController {
         root.setRight(rightBox);
 
         setupInitialValues();
+        setupMemoryTable(leftBox);
 
         return root;
     }
@@ -283,6 +286,47 @@ public class SimulationController {
         storeBufferTable.getColumns().addAll(nameCol, busyCol, addressCol, valueCol, qCol);
     }
 
+    private void setupMemoryTable(VBox leftBox) {
+        memoryTable = new TableView<>();
+
+        // Disable table resizing
+        memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<Memory.MemoryEntry, Integer> addressCol = new TableColumn<>("Address");
+        TableColumn<Memory.MemoryEntry, String> hexValueCol = new TableColumn<>("Value (Hex)");
+        TableColumn<Memory.MemoryEntry, String> asciiCol = new TableColumn<>("ASCII");
+
+        addressCol.setCellValueFactory(cellData -> cellData.getValue().addressProperty().asObject());
+        hexValueCol.setCellValueFactory(cellData -> cellData.getValue().hexValueProperty());
+        asciiCol.setCellValueFactory(cellData -> cellData.getValue().asciiProperty());
+
+        // Set column widths
+        addressCol.setPrefWidth(30);
+        hexValueCol.setPrefWidth(40);
+        asciiCol.setPrefWidth(50);
+
+        // Set the table's preferred width to match columns
+        memoryTable.setPrefWidth(120); // Sum of column widths
+
+        memoryTable.getColumns().addAll(addressCol, hexValueCol, asciiCol);
+        memoryTable.setItems(memory.getMemoryEntries());
+
+        memoryTable.setFixedCellSize(20);
+        memoryTable.setPrefHeight(200);
+
+        ScrollPane memoryScroll = new ScrollPane(memoryTable);
+        memoryScroll.setFitToWidth(true);
+        memoryScroll.setPrefViewportHeight(200);
+
+        VBox memoryBox = new VBox(5);
+        memoryBox.setPrefWidth(120);
+        Label memoryLabel = new Label("Memory");
+        memoryLabel.setStyle("-fx-font-weight: bold;");
+        memoryBox.getChildren().addAll(memoryLabel, memoryScroll);
+
+        leftBox.getChildren().add(memoryBox);
+    }
+
     private void setupInitialValues() {
         loop = 1;
         // Set up default operations
@@ -323,6 +367,10 @@ public class SimulationController {
                     config.cacheParams.get("hitLatency"),
                     config.cacheParams.get("missLatency")
             );
+
+        // Initialize memory
+
+        memory = new Memory(1024); // 1024 bytes of memory
 
         // Initialize register files
         registerFile = new RegisterFile(32);
@@ -389,6 +437,7 @@ public class SimulationController {
         currentCycle = 0;
         currentInstruction = 0;
         instructions.clear();
+        memory.clear();
         instructionTable.getItems().clear();
         setupInitialValues();
         updateDisplay();
