@@ -143,9 +143,23 @@ public class ConfigurationController {
                 return;
             }
         }
-        updateOperations();
-        updateCacheParams();
-        updateBufferSizes();
+        try {
+            updateOperations();
+            updateCacheParams();
+            updateBufferSizes();
+        } catch(NumberFormatException e){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Invalid Input");
+            alert.setHeaderText(null);
+            alert.setContentText(" Please enter integer numbers.");
+            alert.showAndWait();
+        } catch(Exception e){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText(null);
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
         toaster.setText("Successfully configured!");
     }
 
@@ -163,6 +177,14 @@ public class ConfigurationController {
         cacheParams.put("blockSize", Integer.parseInt(blockSize.getText()));
         cacheParams.put("hitLatency", Integer.parseInt(hitLatency.getText()));
         cacheParams.put("missLatency", Integer.parseInt(missLatency.getText()));
+        if(cacheParams.get("size") % cacheParams.get("blockSize") != 0){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Warning");
+            alert.setHeaderText(null);
+            alert.setContentText("The size of the cache is not divisible by the block size.\n" +
+                    "So a part of the cache will be unused");
+            alert.showAndWait();
+        }
     }
 
     private void updateBufferSizes() {
@@ -170,9 +192,5 @@ public class ConfigurationController {
         bufferSizes.put("mulDiv", Integer.parseInt(mulDivStations.getText()));
         bufferSizes.put("load", Integer.parseInt(loadBuffers.getText()));
         bufferSizes.put("store", Integer.parseInt(storeBuffers.getText()));
-    }
-
-    private void closeDialog() {
-        addLatency.getScene().getWindow().hide();
     }
 }
