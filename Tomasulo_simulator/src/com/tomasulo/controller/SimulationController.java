@@ -36,6 +36,7 @@ public class SimulationController {
 
     private int currentCycle = 0;
     private int currentInstruction = 0;
+    private int branchCurrentInstruction;
     private List<InstructionEntry> instructions = new ArrayList<>();
     private Map<String, Integer> operations = new HashMap<>();
     private RegisterFile registerFile;
@@ -48,6 +49,7 @@ public class SimulationController {
     private List<LoadBuffer> intLoadBuffers = new ArrayList<>(); // Integer Load buffers
     private List<StoreBuffer> intStoreBuffers = new ArrayList<>(); // Integer Store buffers
     private List<BranchStation> branchStations = new ArrayList<>(); // Branch stations
+
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
     private int loop;
@@ -422,7 +424,7 @@ public class SimulationController {
         operations.put("S.D", 2);
         operations.put("ADDI", 1);
         operations.put("SUBI", 1);
-        operations.put("DADDI", 1);
+        operations.put("DADDI", 2);
         operations.put("DSUBI", 1);
         operations.put("ADD.D", 2);
         operations.put("ADD.S", 2);
@@ -438,8 +440,8 @@ public class SimulationController {
         operations.put("SW", 2);
         operations.put("SD", 2);
         operations.put("S.S", 2);
-        operations.put("BEQ", 1);
-        operations.put("BNE", 1);
+        operations.put("BEQ", 2);
+        operations.put("BNE", 2);
         if (!config.operations.isEmpty()) operations = config.operations;
 
         // Initialize cache
@@ -475,7 +477,7 @@ public class SimulationController {
         int numMulDiv = config.bufferSizes.getOrDefault("mulDiv", 3);
         int numLoad = config.bufferSizes.getOrDefault("load", 3);
         int numStore = config.bufferSizes.getOrDefault("store", 3);
-        int numBranch = config.bufferSizes.getOrDefault("branch", 2);
+        int numBranch = config.bufferSizes.getOrDefault("branch", 1);
 
         // Initialize floating-point reservation stations
         for (int i = 0; i < numAddSub; i++) {
@@ -555,6 +557,11 @@ public class SimulationController {
                 issueInstruction(instructions.get(currentInstruction));
                 String[] parts = instruction.getInstruction().split(" ");
                 String op = parts[0];
+                if (op.equals("BNE") || op.equals("BEQ")){
+                    branchCurrentInstruction = currentInstruction;
+                    currentInstruction= Integer.MAX_VALUE;
+
+                }
                 if (!(op.equals("BNE") || op.equals("BEQ"))) {
                     currentInstruction++;
                 }
@@ -574,6 +581,15 @@ public class SimulationController {
 
     private boolean hasAvailableStation(List<ReservationStation> stations) {
         for (ReservationStation station : stations) {
+            if (!station.isBusy()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAvailableBranchStation(List<BranchStation> stations) {
+        for (BranchStation station : stations) {
             if (!station.isBusy()) {
                 return true;
             }
@@ -603,9 +619,9 @@ public class SimulationController {
             return hasAvailableStation(intAddSubStations);
         } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
             return hasAvailableStation(mulDivStations);
-        } else if (op.equals("MUL") || op.equals("DIV")){
+        } else if (op.equals("MUL") || op.equals("DIV")) {
             return hasAvailableStation(intMulDivStations);
-        }else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
+        } else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
             int effectiveAddress = calculateEffectiveAddress(src1);
             for (StoreBuffer sb : storeBuffers) {
                 if (sb.isBusy() && sb.getAddress() == effectiveAddress) {
@@ -632,7 +648,7 @@ public class SimulationController {
             }
             for (StoreBuffer buffer : storeBuffers) {
                 if (!buffer.isBusy()) {
-                    return true;
+                    return hasAvailableBranchStation(branchStations);
                 }
             }
             return false;
@@ -682,43 +698,29 @@ public class SimulationController {
         updateDisplay();
     }
 
+    //(InstructionEntry instruction, String op, String dest, String src1, String
+    //            src2
 
-    private void issueToBranch(InstructionEntry instruction, String op, String src1, String src2, String target) {
-        // Convert target to an address or instruction index
-        int targetAddress = getAddressFromLabel(target);
+    private void issueToBranch(InstructionEntry instruction, String op, String dest, String src1, String src2) {
 
-        if (targetAddress == -1) {
-            // Handle the case where the label is not found
-            System.err.println("Error: Label " + target + " not found.");
-            return;
-        }
+        BranchStation rs = firstAvailableBranchStation(branchStations);
 
-        // Check the condition
-        boolean conditionMet = false;
-        if (op.equals("BEQ")) {
-            conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
-        } else if (op.equals("BNE")) {
-            conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
-        }
+        if (rs == null) return;
 
-        if (conditionMet) {
-            // Set current instruction to the target of the branch
-            currentInstruction = targetAddress;
-
-            // Increment the iteration count for the target instruction and re-issue it
-//            InstructionEntry loopInstruction = instructions.get(targetAddress);
-//            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
-            loop++;
-
-
-        } else {
-            // Move to the next instruction
-            currentInstruction++;
-        }
-
-        // Set issue time for the current instruction
+        rs.setInstruction(instruction);
+        System.out.println(rs);
+        rs.setBusy(true);
+        rs.setOperation(op);
+        rs.setVj(registerFile.getValue(dest));
+        rs.setVk(src1 != null ? registerFile.getValue(src1) : "");
+        rs.setQj(registerFile.getStatus(dest));
+        rs.setQk(src1 != null ? registerFile.getStatus(src1) : "");
+        rs.setCycles(operations.get(op));
+        rs.setTarget(src2);
+//        registerFile.setStatus(src2, rs.getName());
         instruction.setIssueTime(currentCycle);
-        updateDisplay();
+
+
     }
 
 
@@ -739,6 +741,15 @@ public class SimulationController {
 
     private ReservationStation firstAvailableStation(List<ReservationStation> stations) {
         for (ReservationStation station : stations) {
+            if (!station.isBusy()) {
+                return station;
+            }
+        }
+        return null;
+    }
+
+    private BranchStation firstAvailableBranchStation(List<BranchStation> stations) {
+        for (BranchStation station : stations) {
             if (!station.isBusy()) {
                 return station;
             }
@@ -879,10 +890,33 @@ public class SimulationController {
         executeReservationStations(mulDivStations);
         executeLoadBuffers();
         executeStoreBuffers();
+
+        executeReservationStations(intAddSubStations);
+        executeReservationStations(intMulDivStations);
+
+        executeBranchStations(branchStations);
     }
 
     private void executeReservationStations(List<ReservationStation> stations) {
         for (ReservationStation rs : stations) {
+            if (rs.isBusy() && rs.getQj().isEmpty() && rs.getQk().isEmpty()) {
+                if (rs.getInstruction().getIssueTime() == currentCycle) {
+                    continue; //skip
+                }
+                if (rs.getCycles() > 0) {
+                    rs.setCycles(rs.getCycles() - 1);
+                }
+                if (rs.getCycles() == 0 && rs.getInstruction().getExecuteTime() == -1) {
+                    rs.setReadyToWrite(true);
+                    rs.getInstruction().setExecuteTime(currentCycle);
+                    performOperation(rs);
+                }
+            }
+        }
+    }
+
+    private void executeBranchStations(List<BranchStation> stations) {
+        for (BranchStation rs : stations) {
             if (rs.isBusy() && rs.getQj().isEmpty() && rs.getQk().isEmpty()) {
                 if (rs.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
@@ -990,8 +1024,61 @@ public class SimulationController {
     }
 
 
+    private void doBranch(BranchStation branchStation) {
+        String op = branchStation.getOperation();
+        String target = branchStation.getTarget();
+        String src1 = branchStation.getVj();
+        String src2 = branchStation.getVk();
+
+        // Convert target to an address or instruction index
+        int targetAddress = getAddressFromLabel(target);
+
+        if (targetAddress == -1) {
+            // Handle the case where the label is not found
+            System.err.println("Error: Label " + target + " not found.");
+            return;
+        }
+
+        currentInstruction=branchCurrentInstruction;
+        // Check the condition
+        boolean conditionMet = false;
+        if (op.equals("BEQ")) {
+            conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
+        } else if (op.equals("BNE")) {
+            conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
+        }
+
+        if (conditionMet) {
+            // Set current instruction to the target of the branch
+            currentInstruction = targetAddress;
+
+            // Increment the iteration count for the target instruction and re-issue it
+//            InstructionEntry loopInstruction = instructions.get(targetAddress);
+//            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
+            loop++;
+
+
+        } else {
+            // Move to the next instruction
+            currentInstruction++;
+        }
+
+        // Set issue time for the current instruction
+        branchStation.getInstruction().setWriteTime(currentCycle);
+        branchStation.clear();
+        updateDisplay();
+    }
+
     private void writeResults() {
+
+       if (branchStations.getFirst().isReadyToWrite()) {
+           doBranch(branchStations.getFirst());
+       }
+
+
+
         List<ExecutionUnit> readyUnits = new ArrayList<>();
+        List<ExecutionUnit> integerReadyUnits = new ArrayList<>();
 
         //get all units ready to write
         collectReadyUnits(addSubStations, readyUnits);
@@ -999,7 +1086,13 @@ public class SimulationController {
         collectReadyUnits(loadBuffers, readyUnits);
         collectReadyUnits(storeBuffers, readyUnits);
 
+        collectReadyUnits(intAddSubStations, integerReadyUnits);
+        collectReadyUnits(intMulDivStations, integerReadyUnits);
+        collectReadyUnits(intLoadBuffers, integerReadyUnits);
+        collectReadyUnits(intStoreBuffers, integerReadyUnits);
+
         //fix if there are multiple registers ready to write use FIFO
+        //Floats
         ExecutionUnit earliestUnit = null;
         int earliestIssueTime = Integer.MAX_VALUE;
 
@@ -1015,16 +1108,40 @@ public class SimulationController {
         if (earliestUnit != null) {
             writeResult(earliestUnit);
         }
+
+        //Integers
+        ExecutionUnit integerEarliestUnit = null;
+        int integerEarliestIssueTime = Integer.MAX_VALUE;
+
+        for (ExecutionUnit unit : integerReadyUnits) {
+            int integerIssueTime = unit.getInstruction().getIssueTime();
+            if (integerIssueTime < integerEarliestIssueTime) {
+                integerEarliestIssueTime = integerIssueTime;
+                integerEarliestUnit = unit;
+            }
+        }
+
+        if (integerEarliestUnit != null) {
+            writeResult(integerEarliestUnit);
+        }
     }
 
 
     private void collectReadyUnits(List<? extends ExecutionUnit> units, List<ExecutionUnit> readyUnits) {
         for (ExecutionUnit unit : units) {
-            if (unit.isReadyToWrite()) {
+            if (unit.isReadyToWrite() && currentCycle != unit.getInstruction().getExecuteTime()) {
                 readyUnits.add(unit);
             }
         }
     }
+
+//    private void collectBranchReadyUnits(List<? extends BranchStation> units, List<BranchStation> readyUnits) {
+//        for (BranchStation unit : units) {
+//            if (unit.isReadyToWrite()) {
+//                readyUnits.add(unit);
+//            }
+//        }
+//    }
 
 
     private void writeResult(ExecutionUnit unit) {
@@ -1106,7 +1223,7 @@ public class SimulationController {
         intStoreBufferTable.setItems(FXCollections.observableArrayList(intStoreBuffers));
 
         // Add branch stations update if there's a table for it in your UI
-         branchTable.setItems(FXCollections.observableArrayList(branchStations));
+        branchTable.setItems(FXCollections.observableArrayList(branchStations));
 
         updateRegisterFileDisplay();
     }
@@ -1141,8 +1258,6 @@ public class SimulationController {
 
         intRegisterFileGrid.setStyle("-fx-grid-lines-visible: true; -fx-padding: 5;");
     }
-
-
 
 
     private <T> void updateBufferSizes(List<T> buffer, int newSize) {
