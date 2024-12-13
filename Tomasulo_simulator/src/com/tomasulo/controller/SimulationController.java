@@ -31,15 +31,14 @@ public class SimulationController {
     private GridPane intRegisterFileGrid; // Integer register file grid
     private TableView<BranchStation> branchTable;
     private RegisterFile intRegisterFile;
+    private RegisterFile registerFile;
     private Label cycleLabel;
     private TextArea codeInput;
-
     private int currentCycle = 0;
     private int currentInstruction = 0;
     private int branchCurrentInstruction;
     private List<InstructionEntry> instructions = new ArrayList<>();
     private Map<String, Integer> operations = new HashMap<>();
-    private RegisterFile registerFile;
     private List<ReservationStation> addSubStations = new ArrayList<>();
     private List<ReservationStation> mulDivStations = new ArrayList<>();
     private List<LoadBuffer> loadBuffers = new ArrayList<>();
@@ -49,7 +48,6 @@ public class SimulationController {
     private List<LoadBuffer> intLoadBuffers = new ArrayList<>(); // Integer Load buffers
     private List<StoreBuffer> intStoreBuffers = new ArrayList<>(); // Integer Store buffers
     private List<BranchStation> branchStations = new ArrayList<>(); // Branch stations
-
     private Map<String, Integer> cacheParams = new HashMap<>();
     private Map<String, Integer> bufferSizes = new HashMap<>();
     private int loop;
@@ -65,10 +63,9 @@ public class SimulationController {
 
     public SimulationController() {
         root = new BorderPane();
-        configView = config.createConfigView();
-        simView = this.createView();
         Button switcher = new Button("Switch View");
         switcher.setOnAction(e -> switchView());
+        configView = config.createConfigView();
         root.setTop(switcher);
         root.setCenter(configView);
         scene = new Scene(root, 1200, 800);
@@ -80,6 +77,12 @@ public class SimulationController {
 
     public void switchView() {
         if (root.getCenter() == configView) {
+            memory = config.getMemory();
+            //print all the memory
+            memory.getMemoryEntries().forEach(entry -> {
+                System.out.println("HERE"+" Address: " + entry.getAddress() + ", Value: " + entry.getHexValue());
+            });
+            simView = this.createView();
             root.setCenter(simView);
             handleReset();
         } else root.setCenter(configView);
@@ -352,6 +355,10 @@ public class SimulationController {
         memoryTable.setPrefWidth(120); // Sum of column widths
 
         memoryTable.getColumns().addAll(addressCol, hexValueCol, asciiCol);
+        // print mem
+        memory.getMemoryEntries().forEach(entry -> {
+            System.out.println("HERE2"+" Address: " + entry.getAddress() + ", Value: " + entry.getHexValue());
+        });
         memoryTable.setItems(memory.getMemoryEntries());
 
         memoryTable.setFixedCellSize(20);
@@ -476,14 +483,22 @@ public class SimulationController {
         if (!config.operations.isEmpty()) operations = config.operations;
 
         // Initialize cache
-        if (config.cacheParams.isEmpty())
-            cache = new Cache(32, 4, 1, 10, memory); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
-        else
-            cache = new Cache(config.cacheParams.get("size"), config.cacheParams.get("blockSize"), config.cacheParams.get("hitLatency"), config.cacheParams.get("missLatency"), memory);
-
+        if (config.cacheParams.isEmpty()) {
+            cache = new Cache(32, 4, 1, 10, memory);
+        } else {
+            cache = new Cache(
+                    config.cacheParams.get("size"),
+                    config.cacheParams.get("blockSize"),
+                    config.cacheParams.get("hitLatency"),
+                    config.cacheParams.get("missLatency"),
+                    memory
+            );
+        }
         // Initialize memory
 
-        memory = new Memory(1024); // 1024 bytes of memory
+        if (memory == null) {
+            memory = new Memory(1024); // 1024 bytes of memory
+        }
 
         // Initialize register files
         registerFile = new RegisterFile(32);
