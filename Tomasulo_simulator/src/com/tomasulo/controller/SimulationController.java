@@ -1247,16 +1247,12 @@ public class SimulationController {
             Label valueLabel = new Label(intRegisterFile.getValue("R" + i));
             Label statusLabel = new Label(intRegisterFile.getStatus("R" + i));
 
-            nameLabel.setStyle("-fx-font-weight: bold;");
-            valueLabel.setStyle("-fx-padding: 0 10 0 10;");
-            statusLabel.setStyle("-fx-padding: 0 0 0 10;");
 
             intRegisterFileGrid.add(nameLabel, 0, i);
             intRegisterFileGrid.add(valueLabel, 1, i);
             intRegisterFileGrid.add(statusLabel, 2, i);
         }
 
-        intRegisterFileGrid.setStyle("-fx-grid-lines-visible: true; -fx-padding: 5;");
     }
 
 
