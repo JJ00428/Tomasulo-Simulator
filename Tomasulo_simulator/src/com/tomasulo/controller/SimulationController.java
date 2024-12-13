@@ -78,13 +78,26 @@ public class SimulationController {
     public void switchView() {
         if (root.getCenter() == configView) {
             memory = config.getMemory();
+            registerFile = config.getRegisterFile();
+            intRegisterFile = config.getIntRegisterFile();
             //print all the memory
             memory.getMemoryEntries().forEach(entry -> {
                 System.out.println("HERE"+" Address: " + entry.getAddress() + ", Value: " + entry.getHexValue());
             });
+            printRegisterState();
             simView = this.createView();
             root.setCenter(simView);
         } else root.setCenter(configView);
+    }
+    private void printRegisterState() {
+        System.out.println("Float Register State:");
+        for (int i = 0; i < 32; i++) {
+            System.out.println("F" + i + ": " + registerFile.getValue("F" + i));
+        }
+        System.out.println("Integer Register State:");
+        for (int i = 0; i < 32; i++) {
+            System.out.println("R" + i + ": " + intRegisterFile.getValue("R" + i));
+        }
     }
 
     public BorderPane createView() {
@@ -504,8 +517,8 @@ public class SimulationController {
         }
 
         // Initialize register files
-        registerFile = new RegisterFile(32);
-        intRegisterFile = new RegisterFile(32);
+        registerFile = config.getRegisterFile();
+        intRegisterFile = config.getIntRegisterFile();
 
         addSubStations.clear();
         mulDivStations.clear();
@@ -829,12 +842,9 @@ public class SimulationController {
 
                 return baseAddress + offset;
             } else {
-
-
-                // Convert register value to double and cast to int
-//            double registerValue = Double.parseDouble(registerFile.getValue(register));
-                int baseAddress = Integer.parseInt(registerFile.getValue(register));
-
+                int baseAddress = (int) Double.parseDouble(registerFile.getValue(register));
+                System.out.println("Base Address: " + baseAddress);
+                System.out.println("Offset: " + offset);
                 return baseAddress + offset;
             }
         } else {
@@ -1460,25 +1470,5 @@ public class SimulationController {
             unit.clear();
         }
     }
-
-
-
-//    private ExecutionUnit findExecutionUnit(String name) {
-//        for (ReservationStation unit : addSubStations) {
-//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-//        }
-//        for (ReservationStation unit : mulDivStations) {
-//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-//        }
-//        for (LoadBuffer unit : loadBuffers) {
-//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-//        }
-//        for (StoreBuffer unit : storeBuffers) {
-//            if (unit.getName().equals(name)) return (ExecutionUnit) unit;
-//        }
-//        return null;
-//    }
-
-
 
 }

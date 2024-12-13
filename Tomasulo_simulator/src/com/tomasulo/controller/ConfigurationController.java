@@ -1,5 +1,6 @@
 package com.tomasulo.controller;
 
+import com.tomasulo.model.RegisterFile;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.property.SimpleStringProperty;
@@ -22,23 +23,59 @@ public class ConfigurationController {
     private TextField addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency;
     private TextField intAddLatency, intSubLatency, intMulLatency, intDivLatency, intLoadLatency, intStoreLatency;
     private TextField branchLatency;
-
     private TextField addSubStations, mulDivStations, loadBuffers, storeBuffers;
     private TextField intAddSubStations, intMulDivStations, intLoadBuffers, intStoreBuffers;
     private TextField branchStation;
-
     private TextField cacheSize, blockSize, hitLatency, missLatency;
-
     private Label toaster;
     private TableView<MemoryEntry> memoryTable;
+    private TableView<RegisterEntry> registerTable;
+    private TableView<RegisterEntry> intRegisterTable;
     private ObservableList<MemoryEntry> memoryData;
+    private ObservableList<RegisterEntry> registerData;
+    private ObservableList<RegisterEntry> intRegisterData;
+    private RegisterFile registerFile;
+    private RegisterFile intRegisterFile;
     private Memory memory;
-
     public Map<String, Integer> operations;
     public Map<String, Integer> cacheParams;
     public Map<String, Integer> bufferSizes;
 
-    // Inner class for memory table entries
+    public static class RegisterEntry {
+        private final SimpleStringProperty register;
+        private final SimpleStringProperty value;
+
+        public RegisterEntry(String register, String value) {
+            this.register = new SimpleStringProperty(register);
+            this.value = new SimpleStringProperty(value);
+        }
+
+        public String getRegister() {
+            return register.get();
+        }
+
+        public void setRegister(String register) {
+            this.register.set(register);
+        }
+
+        public String getValue() {
+            return value.get();
+        }
+
+        public void setValue(String value) {
+            this.value.set(value);
+        }
+
+        public SimpleStringProperty registerProperty() {
+            return register;
+        }
+
+        public SimpleStringProperty valueProperty() {
+            return value;
+        }
+    }
+
+
     public static class MemoryEntry {
         private final SimpleIntegerProperty address;
         private final SimpleStringProperty hexValue;
@@ -49,7 +86,7 @@ public class ConfigurationController {
             this.address = new SimpleIntegerProperty(address);
             this.value = value;
             this.hexValue = new SimpleStringProperty(String.format("%02X", value & 0xFF));
-            this.ascii = new SimpleStringProperty(isPrintable(value) ? String.valueOf((char)value) : ".");
+            this.ascii = new SimpleStringProperty(isPrintable(value) ? String.valueOf((char) value) : ".");
         }
 
         private boolean isPrintable(byte b) {
@@ -59,18 +96,40 @@ public class ConfigurationController {
         public void setValue(byte value) {
             this.value = value;
             hexValue.set(String.format("%02X", value & 0xFF));
-            ascii.set(isPrintable(value) ? String.valueOf((char)value) : ".");
+            ascii.set(isPrintable(value) ? String.valueOf((char) value) : ".");
         }
 
-        public int getAddress() { return address.get(); }
-        public void setAddress(int address) { this.address.set(address); }
-        public byte getValue() { return value; }
-        public String getHexValue() { return hexValue.get(); }
-        public String getAscii() { return ascii.get(); }
+        public int getAddress() {
+            return address.get();
+        }
 
-        public SimpleIntegerProperty addressProperty() { return address; }
-        public SimpleStringProperty hexValueProperty() { return hexValue; }
-        public SimpleStringProperty asciiProperty() { return ascii; }
+        public void setAddress(int address) {
+            this.address.set(address);
+        }
+
+        public byte getValue() {
+            return value;
+        }
+
+        public String getHexValue() {
+            return hexValue.get();
+        }
+
+        public String getAscii() {
+            return ascii.get();
+        }
+
+        public SimpleIntegerProperty addressProperty() {
+            return address;
+        }
+
+        public SimpleStringProperty hexValueProperty() {
+            return hexValue;
+        }
+
+        public SimpleStringProperty asciiProperty() {
+            return ascii;
+        }
     }
 
     public ConfigurationController() {
@@ -78,7 +137,63 @@ public class ConfigurationController {
         cacheParams = new HashMap<>();
         bufferSizes = new HashMap<>();
         memoryData = FXCollections.observableArrayList();
-        memory = new Memory(1024); // Initialize with 1024 bytes
+        registerData = FXCollections.observableArrayList();
+        intRegisterData = FXCollections.observableArrayList();
+        memory = new Memory(1024);
+        registerFile = new RegisterFile(32);
+        intRegisterFile = new RegisterFile(32);
+    }
+
+    private void setupRegisterTable(TableView<RegisterEntry> table, boolean isInteger) {
+        table.setEditable(true);
+
+        TableColumn<RegisterEntry, String> registerCol = new TableColumn<>(isInteger ? "Integer Register" : "Float Register");
+        TableColumn<RegisterEntry, String> valueCol = new TableColumn<>("Value");
+
+        registerCol.setCellValueFactory(cellData -> cellData.getValue().registerProperty());
+        valueCol.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
+
+        // Make value column editable
+        valueCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        valueCol.setOnEditCommit(event -> {
+            RegisterEntry entry = event.getRowValue();
+            try {
+                String newValue = event.getNewValue();
+                if (isInteger) {
+                    int intValue = Integer.parseInt(newValue);
+                    // Add range validation if needed
+                    if (intValue < Integer.MIN_VALUE || intValue > Integer.MAX_VALUE) {
+                        throw new IllegalArgumentException("Value out of range for integer register");
+                    }
+                } else {
+                    double doubleValue = Double.parseDouble(newValue);
+                    // Add range validation if needed
+                    if (Double.isInfinite(doubleValue) || Double.isNaN(doubleValue)) {
+                        throw new IllegalArgumentException("Invalid floating point value");
+                    }
+                }
+                entry.setValue(newValue);
+                updateRegisterFile(entry.getRegister(), newValue, isInteger);
+            } catch (NumberFormatException e) {
+                table.refresh();
+                showError("Invalid number format. Please enter a valid " +
+                        (isInteger ? "integer" : "floating-point") + " number.");
+            } catch (IllegalArgumentException e) {
+                showError(e.getMessage());
+            }
+        });
+
+        table.getColumns().addAll(registerCol, valueCol);
+        table.setPrefHeight(200);
+
+        // Initialize register entries
+        ObservableList<RegisterEntry> data = isInteger ? intRegisterData : registerData;
+        for (int i = 0; i < 32; i++) {
+            String prefix = isInteger ? "R" : "F";
+            String initialValue = isInteger ? "0" : "0.0";
+            data.add(new RegisterEntry(prefix + i, initialValue));
+        }
+        table.setItems(data);
     }
 
     private void setupMemoryTable() {
@@ -116,7 +231,7 @@ public class ConfigurationController {
                 // Convert hex string to byte value
                 int value = Integer.parseInt(event.getNewValue(), 16);
                 if (isValidValue(value)) {
-                    entry.setValue((byte)value);
+                    entry.setValue((byte) value);
                 } else {
                     memoryTable.refresh();
                     showError("Invalid value. Must be between -128 and 127 for bytes.");
@@ -182,14 +297,6 @@ public class ConfigurationController {
         divLatency = new TextField();
         grid.add(divLatency, 1, 4);
 
-        grid.add(new Label("LOAD:"), 0, 5);
-        loadLatency = new TextField();
-        grid.add(loadLatency, 1, 5);
-
-        grid.add(new Label("STORE:"), 0, 6);
-        storeLatency = new TextField();
-        grid.add(storeLatency, 1, 6);
-
         // Cache Parameters
         Label cacheLabel = new Label("Cache Parameters");
         cacheLabel.setStyle("-fx-font-weight: bold");
@@ -252,14 +359,6 @@ public class ConfigurationController {
         intDivLatency = new TextField();
         grid.add(intDivLatency, 3, 4);
 
-        grid.add(new Label("INT LOAD:"), 2, 5);
-        intLoadLatency = new TextField();
-        grid.add(intLoadLatency, 3, 5);
-
-        grid.add(new Label("INT STORE:"), 2, 6);
-        intStoreLatency = new TextField();
-        grid.add(intStoreLatency, 3, 6);
-
         grid.add(new Label("BRANCH:"), 2, 7);
         branchLatency = new TextField();
         grid.add(branchLatency, 3, 7);
@@ -291,45 +390,49 @@ public class ConfigurationController {
         VBox rightSide = new VBox(10);
         rightSide.setPadding(new Insets(0, 0, 0, 20)); // Add padding to separate from left side
 
+
         Label memoryLabel = new Label("Memory Configuration");
         memoryLabel.setStyle("-fx-font-weight: bold");
-
         setupMemoryTable();
+        // Register Configuration
+        Label registerLabel = new Label("Register Configuration");
+        registerLabel.setStyle("-fx-font-weight: bold");
+        registerTable = new TableView<>();
+        setupRegisterTable(registerTable, false);
+        // Integer Register Configuration
+        Label intRegisterLabel = new Label("Integer Register Configuration");
+        intRegisterLabel.setStyle("-fx-font-weight: bold");
+        intRegisterTable = new TableView<>();
+        setupRegisterTable(intRegisterTable, true);
 
-        // Set preferred width for memory table and make it fill the space
         memoryTable.setPrefWidth(300);
         memoryTable.setMinWidth(250);
 
-        // Style the table columns to match the theme
         memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
         // Add memory control buttons
         HBox memoryControls = new HBox(10);
+        HBox registerControls = createRegisterControls();
         memoryControls.setPadding(new Insets(10, 0, 0, 0));
-
         Button addRowButton = new Button("Add Row");
         Button removeRowButton = new Button("Remove Selected");
         Button clearMemoryButton = new Button("Clear Memory");
-
         addRowButton.setOnAction(e -> {
-            memoryData.add(new MemoryEntry(0, (byte)0));
+            memoryData.add(new MemoryEntry(0, (byte) 0));
         });
-
         removeRowButton.setOnAction(e -> {
             MemoryEntry selected = memoryTable.getSelectionModel().getSelectedItem();
             if (selected != null) {
                 memoryData.remove(selected);
             }
         });
-
         clearMemoryButton.setOnAction(e -> {
             memoryData.clear();
         });
-
         memoryControls.getChildren().addAll(addRowButton, removeRowButton, clearMemoryButton);
-        rightSide.getChildren().addAll(memoryLabel, memoryTable, memoryControls);
+        rightSide.getChildren().addAll(memoryLabel, memoryTable, memoryControls, registerLabel, registerTable, registerControls,
+                intRegisterLabel, intRegisterTable);
 
-        // Add left and right sides to main content
+
         mainContent.getChildren().addAll(leftSide, rightSide);
 
         // Add spacing before the button box
@@ -400,13 +503,13 @@ public class ConfigurationController {
         TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency,
                 cacheSize, blockSize, hitLatency, missLatency,
                 addSubStations, mulDivStations, loadBuffers, storeBuffers,
-                intAddLatency, intSubLatency, intMulLatency, intDivLatency,branchLatency,
-                intAddSubStations, intMulDivStations, intLoadBuffers, intStoreBuffers,branchStation
+                intAddLatency, intSubLatency, intMulLatency, intDivLatency, branchLatency,
+                intAddSubStations, intMulDivStations, intLoadBuffers, intStoreBuffers, branchStation
         };
 
         // Check if required fields are filled
-        for(TextField field : allFields){
-            if(field.getText() == null || field.getText().isEmpty()){
+        for (TextField field : allFields) {
+            if (field.getText() == null || field.getText().isEmpty()) {
                 toaster.setText("Please fill in all text fields!");
                 toaster.setStyle("-fx-text-fill: red;");
                 return;
@@ -418,6 +521,7 @@ public class ConfigurationController {
             updateCacheParams();
             updateBufferSizes();
             updateMemory();
+            updateRegisterFiles();
 
             // Print debug information
             System.out.println("Configuration saved:");
@@ -425,6 +529,7 @@ public class ConfigurationController {
             System.out.println("Cache parameters: " + cacheParams);
             System.out.println("Buffer sizes: " + bufferSizes);
             printMemoryState();
+            printRegisterState();
 
             // Update toaster with success message
             toaster.setText("Configuration successfully saved!");
@@ -437,15 +542,29 @@ public class ConfigurationController {
             );
             timeline.play();
 
-        } catch(NumberFormatException e){
+        } catch (NumberFormatException e) {
             toaster.setText("Please enter valid numbers");
             toaster.setStyle("-fx-text-fill: red;");
             e.printStackTrace();
-        } catch(Exception e){
-            toaster.setText("Error: " + e.getMessage());
-            toaster.setStyle("-fx-text-fill: red;");
-            e.printStackTrace();
         }
+    }
+
+    private HBox createRegisterControls() {
+        HBox controls = new HBox(10);
+        controls.setPadding(new Insets(10, 0, 0, 0));
+
+        Button clearRegistersButton = new Button("Clear Registers");
+        clearRegistersButton.setOnAction(e -> {
+            registerData.clear();
+            intRegisterData.clear();
+            for (int i = 0; i < 32; i++) {
+                registerData.add(new RegisterEntry("F" + i, "0.0"));
+                intRegisterData.add(new RegisterEntry("R" + i, "0"));
+            }
+        });
+
+        controls.getChildren().add(clearRegistersButton);
+        return controls;
     }
 
     private void updateOperations() {
@@ -476,7 +595,7 @@ public class ConfigurationController {
         cacheParams.put("blockSize", Integer.parseInt(blockSize.getText()));
         cacheParams.put("hitLatency", Integer.parseInt(hitLatency.getText()));
         cacheParams.put("missLatency", Integer.parseInt(missLatency.getText()));
-        if(cacheParams.get("size") % cacheParams.get("blockSize") != 0){
+        if (cacheParams.get("size") % cacheParams.get("blockSize") != 0) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Warning");
             alert.setHeaderText(null);
@@ -496,6 +615,34 @@ public class ConfigurationController {
         bufferSizes.put("intLoad", Integer.parseInt(intLoadBuffers.getText()));
         bufferSizes.put("intStore", Integer.parseInt(intStoreBuffers.getText()));
         bufferSizes.put("branch", Integer.parseInt(branchStation.getText()));
+    }
+
+    private void updateRegisterFiles() {
+        for (RegisterEntry entry : registerData) {
+            registerFile.setValue(entry.getRegister(), entry.getValue());
+        }
+        for (RegisterEntry entry : intRegisterData) {
+            intRegisterFile.setValue(entry.getRegister(), entry.getValue());
+        }
+    }
+
+    private void printRegisterState() {
+        System.out.println("Float Register State:");
+        for (RegisterEntry entry : registerData) {
+            System.out.println(entry.getRegister() + ": " + entry.getValue());
+        }
+        System.out.println("Integer Register State:");
+        for (RegisterEntry entry : intRegisterData) {
+            System.out.println(entry.getRegister() + ": " + entry.getValue());
+        }
+    }
+
+    private void updateRegisterFile(String register, String value, boolean isInteger) {
+        if (isInteger) {
+            intRegisterFile.setValue(register, value);
+        } else {
+            registerFile.setValue(register, value);
+        }
     }
 
     private void updateMemory() {
@@ -525,6 +672,7 @@ public class ConfigurationController {
             showError("Error updating memory: " + e.getMessage());
         }
     }
+
     public void printMemoryState() {
         System.out.println("Current Memory State:");
         for (int i = 0; i < memory.getSize(); i++) {
@@ -534,7 +682,16 @@ public class ConfigurationController {
             }
         }
     }
+
     public Memory getMemory() {
         return memory;
+    }
+
+    public RegisterFile getRegisterFile() {
+        return registerFile;
+    }
+
+    public RegisterFile getIntRegisterFile() {
+        return intRegisterFile;
     }
 }
