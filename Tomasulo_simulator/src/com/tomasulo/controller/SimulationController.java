@@ -38,7 +38,6 @@ public class SimulationController {
     private int currentInstruction = 0;
     private List<InstructionEntry> instructions = new ArrayList<>();
     private Map<String, Integer> operations = new HashMap<>();
-    private Cache cache;
     private RegisterFile registerFile;
     private List<ReservationStation> addSubStations = new ArrayList<>();
     private List<ReservationStation> mulDivStations = new ArrayList<>();
@@ -54,6 +53,8 @@ public class SimulationController {
     private int loop;
     private Memory memory;
     private TableView<Memory.MemoryEntry> memoryTable;
+    private Cache cache;
+    private TableView<Cache.CacheEntry> cacheTable;
 
     public SimulationController() {
         root = new BorderPane();
@@ -190,6 +191,7 @@ public class SimulationController {
 
         setupInitialValues();
         setupMemoryTable(leftBox);
+        setupCacheTable(leftBox);
 
         return root;
     }
@@ -327,6 +329,49 @@ public class SimulationController {
 
         leftBox.getChildren().add(memoryBox);
     }
+    private void setupCacheTable(VBox leftBox) {
+        cacheTable = new TableView<>();
+
+        // Disable table resizing
+        cacheTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<Cache.CacheEntry, Integer> blockIndexCol = new TableColumn<>("blockIndex");
+        TableColumn<Cache.CacheEntry, String> validCol = new TableColumn<>("valid");
+        TableColumn<Cache.CacheEntry, String> tagCol = new TableColumn<>("Tag");
+        TableColumn<Cache.CacheEntry, String> hexValuesCol = new TableColumn<>("values (Hex)");
+
+        blockIndexCol.setCellValueFactory(cellData -> cellData.getValue().blockIndexProperty().asObject());
+        validCol.setCellValueFactory(cellData -> cellData.getValue().validProperty().asObject().asString());
+        tagCol.setCellValueFactory(cellData -> cellData.getValue().tagProperty().asObject().asString());
+        hexValuesCol.setCellValueFactory(cellData -> cellData.getValue().hexValuesProperty());
+
+        // Set column widths
+        blockIndexCol.setPrefWidth(30);
+        validCol.setPrefWidth(30);
+        tagCol.setPrefWidth(30);
+        hexValuesCol.setPrefWidth(50);
+
+        // Set the table's preferred width to match columns
+        cacheTable.setPrefWidth(120); // Sum of column widths
+
+        cacheTable.getColumns().addAll(blockIndexCol, validCol, tagCol, hexValuesCol);
+        cacheTable.setItems(cache.getCacheEntries());
+
+        cacheTable.setFixedCellSize(20);
+        cacheTable.setPrefHeight(200);
+
+        ScrollPane cacheScroll = new ScrollPane(cacheTable);
+        cacheScroll.setFitToWidth(true);
+        cacheScroll.setPrefViewportHeight(200);
+
+        VBox cacheBox = new VBox(5);
+        cacheBox.setPrefWidth(120);
+        Label cacheLabel = new Label("Cache");
+        cacheLabel.setStyle("-fx-font-weight: bold;");
+        cacheBox.getChildren().addAll(cacheLabel, cacheScroll);
+
+        leftBox.getChildren().add(cacheBox);
+    }
 
     private void setupInitialValues() {
         loop = 1;
@@ -361,12 +406,13 @@ public class SimulationController {
 
         // Initialize cache
         if (config.cacheParams.isEmpty())
-            cache = new Cache(32, 4, 1, 10); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
+            cache = new Cache(32, 4, 1, 10, memory); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
         else
             cache = new Cache(config.cacheParams.get("size"),
                     config.cacheParams.get("blockSize"),
                     config.cacheParams.get("hitLatency"),
-                    config.cacheParams.get("missLatency")
+                    config.cacheParams.get("missLatency"),
+                    memory
             );
 
         // Initialize memory
