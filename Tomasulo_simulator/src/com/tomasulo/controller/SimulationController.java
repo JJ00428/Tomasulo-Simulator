@@ -177,16 +177,19 @@ public class SimulationController {
 
         // Right
         HBox rightBox = new HBox(10);
-        registerFileGrid = new GridPane();
-        registerFileGrid.setHgap(5);
-        registerFileGrid.setVgap(5);
+//        registerFileGrid = new GridPane();
+//        registerFileGrid.setHgap(5);
+//        registerFileGrid.setVgap(5);
+//
+//        // Integer register file grid
+//        intRegisterFileGrid = new GridPane();
+//        intRegisterFileGrid.setHgap(5);
+//        intRegisterFileGrid.setVgap(5);
 
-        // Integer register file grid
-        intRegisterFileGrid = new GridPane();
-        intRegisterFileGrid.setHgap(5);
-        intRegisterFileGrid.setVgap(5);
 
-        rightBox.getChildren().addAll(new Label("Register File"), registerFileGrid, new Label("Integer Register File"), intRegisterFileGrid);
+        setupRegisterFile(rightBox);
+
+//        rightBox.getChildren().addAll(new Label("Register File"), registerFileGrid, new Label("Integer Register File"), intRegisterFileGrid);
         root.setRight(rightBox);
 
         setupInitialValues();
@@ -372,6 +375,41 @@ public class SimulationController {
 
         leftBox.getChildren().add(cacheBox);
     }
+
+
+    private void setupRegisterFile(HBox rightBox) {
+        registerFileGrid = new GridPane();
+        registerFileGrid.setHgap(5);
+        registerFileGrid.setVgap(5);
+
+        // Integer register file grid
+        intRegisterFileGrid = new GridPane();
+        intRegisterFileGrid.setHgap(5);
+        intRegisterFileGrid.setVgap(5);
+
+        // Floating-point register file
+        VBox registerBox = new VBox(5);
+        registerBox.setPrefWidth(120);
+        Label registerLabel = new Label("Register File");
+        registerLabel.setStyle("-fx-font-weight: bold;");
+        ScrollPane registerScroll = new ScrollPane(registerFileGrid);
+        registerScroll.setFitToWidth(true);
+        registerScroll.setPrefViewportHeight(200);
+        registerBox.getChildren().addAll(registerLabel, registerScroll);
+
+        // Integer register file
+        VBox intRegisterBox = new VBox(5);
+        intRegisterBox.setPrefWidth(120);
+        Label intRegisterLabel = new Label("Integer Register File");
+        intRegisterLabel.setStyle("-fx-font-weight: bold;");
+        ScrollPane intRegisterScroll = new ScrollPane(intRegisterFileGrid);
+        intRegisterScroll.setFitToWidth(true);
+        intRegisterScroll.setPrefViewportHeight(200);
+        intRegisterBox.getChildren().addAll(intRegisterLabel, intRegisterScroll);
+
+        rightBox.getChildren().addAll(registerBox, intRegisterBox);
+    }
+
 
     private void setupInitialValues() {
         loop = 1;
