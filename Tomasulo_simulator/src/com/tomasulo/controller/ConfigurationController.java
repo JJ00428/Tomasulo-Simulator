@@ -140,8 +140,8 @@ public class ConfigurationController {
         registerData = FXCollections.observableArrayList();
         intRegisterData = FXCollections.observableArrayList();
         memory = new Memory(1024);
-        registerFile = new RegisterFile(32);
-        intRegisterFile = new RegisterFile(32);
+        registerFile = new RegisterFile(32, false);
+        intRegisterFile = new RegisterFile(32, true);
     }
 
     private void setupRegisterTable(TableView<RegisterEntry> table, boolean isInteger) {

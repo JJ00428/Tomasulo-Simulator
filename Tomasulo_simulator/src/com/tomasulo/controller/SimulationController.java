@@ -30,8 +30,8 @@ public class SimulationController {
     private GridPane registerFileGrid;
     private GridPane intRegisterFileGrid; // Integer register file grid
     private TableView<BranchStation> branchTable;
-    private RegisterFile intRegisterFile;
-    private RegisterFile registerFile;
+    private RegisterFile<Integer> intRegisterFile;
+    private RegisterFile<Double> registerFile;
     private Label cycleLabel;
     private TextArea codeInput;
     private int currentCycle = 0;
@@ -109,9 +109,9 @@ public class SimulationController {
         cycleLabel.setStyle("-fx-font-size: 18px;");
         stepButton = new Button("Step");
         stepButton.setOnAction(e -> handleStep());
-        Button resetButton = new Button("Reset");
-        resetButton.setOnAction(e -> handleReset());
-        topBox.getChildren().addAll(cycleLabel, stepButton, resetButton);
+//        Button resetButton = new Button("Reset");
+//        resetButton.setOnAction(e -> handleReset());
+        topBox.getChildren().addAll(cycleLabel, stepButton);
         root.setTop(topBox);
 
         // Left
@@ -478,8 +478,8 @@ public class SimulationController {
         operations.put("SUB.S", 2);
         operations.put("MUL.D", 10);
         operations.put("MUL.S", 10);
-        operations.put("DIV.D", 40);
-        operations.put("DIV.S", 40);
+        operations.put("DIV.D", 15);
+        operations.put("DIV.S", 15);
         operations.put("BEQ", 2);
         operations.put("BNE", 2);
         if (!config.operations.isEmpty()) operations = config.operations;
@@ -580,6 +580,8 @@ public class SimulationController {
         currentInstruction = 0;
         instructions.clear();
         memory.clear();
+        registerFile.clearAll();
+        intRegisterFile.clearAll();
         cache.clear();
         instructionTable.getItems().clear();
         setupInitialValues();
@@ -841,6 +843,10 @@ public class SimulationController {
                 System.out.println("Offset: " + offset);
                 return baseAddress + offset;
             }
+        } if (addressString.startsWith("R")) {
+
+            double registerValue = Double.parseDouble(intRegisterFile.getValue(addressString));
+            return (int) Math.floor(registerValue);
         } else {
             System.out.println(addressString);
             return Integer.parseInt(addressString); // For standalone addresses
@@ -1274,8 +1280,8 @@ public class SimulationController {
                 }
             }
         }
-            writeResults();
-            executeInstructions();
+        executeInstructions();
+        writeResults();
         System.out.println("Current Instruction: " + currentInstruction);
         if (isProgramComplete()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
