@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Cache {
-    // TODO: have minimum size for cache block to fit double word
+    // TODO: have minimum size for cache block to fit double word (8 bytes)
     private final int size;
     private final int blockSize;
     private final int hitLatency;
@@ -104,25 +104,30 @@ public class Cache {
     // NB: only use read or write after finishing cycles needed for execution
     public int readWord(int address){
         validateWordAddress(address);
-
-//        blocks[blockIndex].valid = true;
-//        blocks[blockIndex].tag = temp / (1 << indexBits);
-//        blocks[blockIndex].elements[blockOffset] = memory.readByte(address);
-//        blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
-//        blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
-//        blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        int blockOffset = address % blockSize;
+        blocks[blockIndex].valid = true;
+        blocks[blockIndex].tag = temp / (1 << indexBits);
+        blocks[blockIndex].elements[blockOffset] = memory.readByte(address);
+        blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
+        blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
+        blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
 
         return memory.readWord(address);
     }
     public void writeWord(int address, int value){
         validateWordAddress(address);
 
-//        blocks[blockIndex].valid = true;
-//        blocks[blockIndex].tag = temp / (1 << indexBits);
-//        blocks[blockIndex].elements[blockOffset] = (byte) (value >>> 24);
-//        blocks[blockIndex].elements[blockOffset + 1] = (byte) (value >>> 16);
-//        blocks[blockIndex].elements[blockOffset + 2] = (byte) (value >>> 8);
-//        blocks[blockIndex].elements[blockOffset + 3] = (byte) value;
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        int blockOffset = address % blockSize;
+        blocks[blockIndex].valid = true;
+        blocks[blockIndex].tag = temp / (1 << indexBits);
+        blocks[blockIndex].elements[blockOffset] = memory.readByte(address);
+        blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
+        blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
+        blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
 
         memory.writeWord(address, value);
 

@@ -84,7 +84,6 @@ public class SimulationController {
             });
             simView = this.createView();
             root.setCenter(simView);
-            handleReset();
         } else root.setCenter(configView);
     }
 
@@ -1092,6 +1091,17 @@ public class SimulationController {
                     continue; //skip
                 }
                 if(cache.requestWord(lb.getAddress(), lb.getName())){
+                    InstructionEntry instruction = lb.getInstruction();
+                    String[] parts = instruction.getInstruction().split(" ");
+                    String op = parts[0];
+
+                    if(op.equals("L.D"))
+                        lb.setResult(cache.readDouble(lb.getAddress()));
+                    else if(op.equals("L.S"))
+                        lb.setResult(cache.readFloat(lb.getAddress()));
+                    else
+                        throw new RuntimeException("What is this: " + op);
+
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1104,6 +1114,17 @@ public class SimulationController {
                     continue; //skip
                 }
                 if(cache.requestWord(lb.getAddress(), lb.getName())){
+                    InstructionEntry instruction = lb.getInstruction();
+                    String[] parts = instruction.getInstruction().split(" ");
+                    String op = parts[0];
+
+                    if(op.equals("LD"))
+                        lb.setResult(cache.readLong(lb.getAddress()));
+                    else if(op.equals("LW"))
+                        lb.setResult(cache.readWord(lb.getAddress()));
+                    else
+                        throw new RuntimeException("What is this: " + op);
+
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1117,6 +1138,16 @@ public class SimulationController {
                     continue; //skip
                 }
                 if(cache.requestWord(sb.getAddress(), sb.getName())){
+                    InstructionEntry instruction = sb.getInstruction();
+                    String[] parts = instruction.getInstruction().split(" ");
+                    String op = parts[0];
+
+                    if(op.equals("S.D"))
+                        cache.writeDouble(sb.getAddress(), sb.getValue());
+                    else if(op.equals("S.S"))
+                        cache.writeFloat(sb.getAddress(), (float) sb.getValue());
+                    else
+                        throw new RuntimeException("What is this: " + op);
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1129,6 +1160,16 @@ public class SimulationController {
                     continue; //skip
                 }
                 if(cache.requestWord(sb.getAddress(), sb.getName())){
+                    InstructionEntry instruction = sb.getInstruction();
+                    String[] parts = instruction.getInstruction().split(" ");
+                    String op = parts[0];
+
+                    if(op.equals("SD"))
+                        cache.writeLong(sb.getAddress(), (long) sb.getValue());
+                    else if(op.equals("SW"))
+                        cache.writeWord(sb.getAddress(), (int) sb.getValue());
+                    else
+                        throw new RuntimeException("What is this: " + op);
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
