@@ -885,7 +885,7 @@ public class SimulationController {
         rs.setBusy(true);
         rs.setOperation(op);
         rs.setVj(intRegisterFile.getValue(src1));
-        rs.setVk(src2 != null ? intRegisterFile.getValue(src2) : "");
+        rs.setVk(src2);
         rs.setQj(intRegisterFile.getStatus(src1));
         rs.setQk(src2 != null ? intRegisterFile.getStatus(src2) : "");
         rs.setCycles(operations.get(op));
@@ -901,7 +901,7 @@ public class SimulationController {
         rs.setBusy(true);
         rs.setOperation(op);
         rs.setVj(intRegisterFile.getValue(src1));
-        rs.setVk(intRegisterFile.getValue(src2));
+        rs.setVk(src2);
         rs.setQj(intRegisterFile.getStatus(src1));
         rs.setQk(intRegisterFile.getStatus(src2));
         rs.setCycles(operations.get(op));
@@ -936,6 +936,9 @@ public class SimulationController {
         String dest = parts[1].replace(",", "");
         String src1 = parts.length > 2 ? parts[2].replace(",", "") : "";
         String src2 = parts.length > 3 ? parts[3].replace(",", "") : "";
+        System.out.println("Dest: " + dest);
+        System.out.println("src: " + src1);
+        System.out.println("src2: " + src2);
 
         switch (op) {
             case "ADD", "SUB", "ADDI", "SUBI", "DADDI", "DSUBI" ->
@@ -984,11 +987,9 @@ public class SimulationController {
         try {
             // Special handling for branch instructions
             if (operation.equals("BEQ") || operation.equals("BNE")) {
-                // For branch instructions, we only need to perform the comparison
-                // The actual branch logic is handled in doBranch method
+                // Branch handling remains the same
                 double vj = parseFloat(rs.getVj());
                 double vk = parseFloat(rs.getVk());
-                // Store comparison result (1 for true, 0 for false)
                 result = (vj == vk) ? 1 : 0;
                 rs.setResult(Double.parseDouble(String.valueOf(result)));
                 return;
@@ -998,23 +999,31 @@ public class SimulationController {
             double vj = parseFloat(rs.getVj());
             double vk = parseFloat(rs.getVk());
 
+            // Get the destination register from the instruction
+            String[] parts = rs.getInstruction().getInstruction().split(" ");
+            String destReg = parts[1].replace(",", "");
+
             switch (operation) {
                 // Integer operations
                 case "ADD":
-                case "ADDI":
                 case "DADDI":
                     result = vj + vk;
-                    if (operation.equals("ADD") || operation.equals("ADDI")) {
-                        result = (int) result; // Ensure integer result
+                    if (operation.equals("ADD") ) {
+                        result = (int) result;
+//                        intRegisterFile.setValue(destReg, String.valueOf((int)result));
+                    } else {
+//                        intRegisterFile.setValue(destReg, String.valueOf(result));
                     }
                     break;
 
                 case "SUB":
-                case "SUBI":
                 case "DSUBI":
                     result = vj - vk;
-                    if (operation.equals("SUB") || operation.equals("SUBI")) {
-                        result = (int) result; // Ensure integer result
+                    if (operation.equals("SUB")) {
+                        result = (int) result;
+//                        intRegisterFile.setValue(destReg, String.valueOf((int)result));
+                    } else {
+//                        intRegisterFile.setValue(destReg, String.valueOf(result));
                     }
                     break;
 
@@ -1022,11 +1031,13 @@ public class SimulationController {
                 case "ADD.D":
                 case "ADD.S":
                     result = vj + vk;
+                    registerFile.setValue(destReg, String.format("%.2f", result));
                     break;
 
                 case "SUB.D":
                 case "SUB.S":
                     result = vj - vk;
+                    registerFile.setValue(destReg, String.format("%.2f", result));
                     break;
 
                 case "MUL":
@@ -1034,7 +1045,10 @@ public class SimulationController {
                 case "MUL.S":
                     result = vj * vk;
                     if (operation.equals("MUL")) {
-                        result = (int) result; // Ensure integer result
+                        result = (int) result;
+//                        intRegisterFile.setValue(destReg, String.valueOf((int)result));
+                    } else {
+//                        registerFile.setValue(destReg, String.format("%.2f", result));
                     }
                     break;
 
@@ -1044,7 +1058,10 @@ public class SimulationController {
                     if (vk != 0) {
                         result = vj / vk;
                         if (operation.equals("DIV")) {
-                            result = (int) result; // Ensure integer result
+                            result = (int) result;
+                            intRegisterFile.setValue(destReg, String.valueOf((int)result));
+                        } else {
+                            registerFile.setValue(destReg, String.format("%.2f", result));
                         }
                     } else {
                         System.err.println("Error: Division by zero");
@@ -1057,12 +1074,10 @@ public class SimulationController {
                     result = Double.NaN;
             }
 
-            // Format the result based on operation type
+            // Set the result in the reservation station
             if (operation.endsWith(".D") || operation.endsWith(".S")) {
-                // For floating point operations, maintain decimal precision
                 rs.setResult(Double.parseDouble(String.format("%.2f", result)));
             } else {
-                // For integer operations, remove decimal part
                 rs.setResult(Double.parseDouble(String.valueOf((int) result)));
             }
 
@@ -1109,43 +1124,56 @@ public class SimulationController {
         for (LoadBuffer lb : loadBuffers) {
             if (lb.isBusy() && !lb.isReadyToWrite()) {
                 if (lb.getInstruction().getIssueTime() == currentCycle) {
-                    continue; //skip
+                    continue;
                 }
                 if(cache.requestWord(lb.getAddress(), lb.getName())){
                     InstructionEntry instruction = lb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    String destReg = parts[1].replace(",", "");
 
-                    if(op.equals("L.D"))
-                        lb.setResult(cache.readDouble(lb.getAddress()));
-                    else if(op.equals("L.S"))
-                        lb.setResult(cache.readFloat(lb.getAddress()));
-                    else
-                        throw new RuntimeException("What is this: " + op);
+                    double result;
+                    if(op.equals("L.D")) {
+                        result = cache.readDouble(lb.getAddress());
+                        registerFile.setValue(destReg, String.format("%.2f", result));
+                    } else if(op.equals("L.S")) {
+                        result = cache.readFloat(lb.getAddress());
+                        registerFile.setValue(destReg, String.format("%.2f", result));
+                    } else {
+                        throw new RuntimeException("Invalid operation: " + op);
+                    }
 
+                    lb.setResult(result);
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
             }
         }
-        // integer load buffer //
+
+        // Integer load buffer
         for (LoadBuffer lb : intLoadBuffers) {
             if (lb.isBusy() && !lb.isReadyToWrite()) {
                 if (lb.getInstruction().getIssueTime() == currentCycle) {
-                    continue; //skip
+                    continue;
                 }
                 if(cache.requestWord(lb.getAddress(), lb.getName())){
                     InstructionEntry instruction = lb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    String destReg = parts[1].replace(",", "");
 
-                    if(op.equals("LD"))
-                        lb.setResult(cache.readLong(lb.getAddress()));
-                    else if(op.equals("LW"))
-                        lb.setResult(cache.readWord(lb.getAddress()));
-                    else
-                        throw new RuntimeException("What is this: " + op);
+                    double result;
+                    if(op.equals("LD")) {
+                        result = cache.readLong(lb.getAddress());
+                        intRegisterFile.setValue(destReg, String.valueOf((long)result));
+                    } else if(op.equals("LW")) {
+                        result = cache.readWord(lb.getAddress());
+                        intRegisterFile.setValue(destReg, String.valueOf((int)result));
+                    } else {
+                        throw new RuntimeException("Invalid operation: " + op);
+                    }
 
+                    lb.setResult(result);
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1154,21 +1182,27 @@ public class SimulationController {
     }
     private void executeStoreBuffers() {
         for (StoreBuffer sb : storeBuffers) {
-            if (sb.isBusy() && sb.getQ().isEmpty()&& !sb.isReadyToWrite()) {
+            if (sb.isBusy() && sb.getQ().isEmpty() && !sb.isReadyToWrite()) {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
-                    continue; //skip
+                    continue;
                 }
                 if(cache.requestWord(sb.getAddress(), sb.getName())){
                     InstructionEntry instruction = sb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    String srcReg = parts[1].replace(",", "");
 
-                    if(op.equals("S.D"))
-                        cache.writeDouble(sb.getAddress(), sb.getValue());
-                    else if(op.equals("S.S"))
-                        cache.writeFloat(sb.getAddress(), (float) sb.getValue());
-                    else
-                        throw new RuntimeException("What is this: " + op);
+                    double value = sb.getValue();
+                    if(op.equals("S.D")) {
+                        cache.writeDouble(sb.getAddress(), value);
+                        registerFile.setValue(srcReg, String.format("%.2f", value));
+                    } else if(op.equals("S.S")) {
+                        cache.writeFloat(sb.getAddress(), (float) value);
+                        registerFile.setValue(srcReg, String.format("%.2f", value));
+                    } else {
+                        throw new RuntimeException("Invalid operation: " + op);
+                    }
+
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1176,21 +1210,27 @@ public class SimulationController {
         }
 
         for (StoreBuffer sb : intStoreBuffers) {
-            if (sb.isBusy() && sb.getQ().isEmpty()&& !sb.isReadyToWrite()) {
+            if (sb.isBusy() && sb.getQ().isEmpty() && !sb.isReadyToWrite()) {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
-                    continue; //skip
+                    continue;
                 }
                 if(cache.requestWord(sb.getAddress(), sb.getName())){
                     InstructionEntry instruction = sb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    String srcReg = parts[1].replace(",", "");
 
-                    if(op.equals("SD"))
-                        cache.writeLong(sb.getAddress(), (long) sb.getValue());
-                    else if(op.equals("SW"))
-                        cache.writeWord(sb.getAddress(), (int) sb.getValue());
-                    else
-                        throw new RuntimeException("What is this: " + op);
+                    double value = sb.getValue();
+                    if(op.equals("SD")) {
+                        cache.writeLong(sb.getAddress(), (long) value);
+                        intRegisterFile.setValue(srcReg, String.valueOf((long)value));
+                    } else if(op.equals("SW")) {
+                        cache.writeWord(sb.getAddress(), (int) value);
+                        intRegisterFile.setValue(srcReg, String.valueOf((int)value));
+                    } else {
+                        throw new RuntimeException("Invalid operation: " + op);
+                    }
+
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1234,9 +1274,8 @@ public class SimulationController {
                 }
             }
         }
-        executeInstructions();
-        writeResults();
-//        updateDisplay();
+            writeResults();
+            executeInstructions();
         System.out.println("Current Instruction: " + currentInstruction);
         if (isProgramComplete()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -1247,8 +1286,6 @@ public class SimulationController {
             stepButton.setDisable(true);
         }
     }
-
-
     //--------------Branches & Loops --------------
     private int getAddressFromLabel(String label) {
         for (int i = 0; i < instructions.size(); i++) {
