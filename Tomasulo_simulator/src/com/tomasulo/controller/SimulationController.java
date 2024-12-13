@@ -60,6 +60,7 @@ public class SimulationController {
     private int instructionCount = 0;
     private int loopStartIndex = -1;
     private int loopEndIndex = -1;
+    private boolean lastBranchTaken = false;
     Button stepButton ;
     public SimulationController() {
         root = new BorderPane();
@@ -536,6 +537,7 @@ public class SimulationController {
             InstructionEntry instruction = instructions.get(i);
             instruction.setInLoop(i >= startIndex && i <= endIndex);
         }
+        System.out.println("Loop marked from " + startIndex + " to " + endIndex);
     }
 
     private int getTotalInstructionsCount() {
@@ -585,6 +587,7 @@ public class SimulationController {
                 String[] parts = line.split(" ");
                 if (parts.length > 3 && parts[3].equals(loopStartLabel)) {
                     loopEndLabel = loopStartLabel;
+                    System.out.println("Loop detected: " + loopStartLabel);
                     // Mark the loop boundaries
                     markLoopInstructions(findLabelIndex(loopStartLabel), i);
                 }
@@ -593,6 +596,8 @@ public class SimulationController {
 
         instructionCount = instructions.size();
         currentInstruction = 0;
+
+        System.out.println("Instructions loaded: " + instructionCount);
 
         // Notification
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -640,9 +645,11 @@ public class SimulationController {
 //
 //    }
 private boolean isProgramComplete() {
+
     if (currentInstruction < getTotalInstructionsCount()) {
         return false;
     }
+    System.out.println("Total Instructions: " + getTotalInstructionsCount());
 
     for (ReservationStation rs : addSubStations) {
         if (rs.isBusy()) return false;
@@ -680,6 +687,7 @@ private boolean isProgramComplete() {
 
     private void executeOneCycle() {
         if (currentInstruction < getTotalInstructionsCount()) {
+
             if (!instructions.isEmpty() && canIssueInstruction(instructions.get(currentInstruction))) {
                 InstructionEntry instruction = instructions.get(currentInstruction);
 
@@ -696,17 +704,16 @@ private boolean isProgramComplete() {
 
                 String[] parts = instruction.getInstruction().split(" ");
                 String op = parts[0];
-                if (op.equals("BNE") || op.equals("BEQ")) {
+                if (isBranchInstruction(op)) {
                     branchCurrentInstruction = currentInstruction;
-                    currentInstruction = Integer.MAX_VALUE;
-                }
-                if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                } else {
                     currentInstruction++;
                 }
             }
         }
         executeInstructions();
         writeResults();
+        System.out.println("Current Instruction: " + currentInstruction);
         if (isProgramComplete()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Program Complete");
@@ -792,9 +799,13 @@ private boolean isProgramComplete() {
         }
 
         if (op.equals("BNE") || op.equals("BEQ")) {
-            return true;
+            return hasAvailableBranchStation(branchStations);
         }
         return false;
+    }
+
+    private boolean isBranchInstruction(String op) {
+        return op.equals("BEQ") || op.equals("BNE");
     }
 
     private void issueInstruction(InstructionEntry instruction1) {
@@ -846,25 +857,24 @@ private boolean isProgramComplete() {
     //            src2
 
     private void issueToBranch(InstructionEntry instruction, String op, String dest, String src1, String src2) {
-
         BranchStation rs = firstAvailableBranchStation(branchStations);
-
         if (rs == null) return;
 
         rs.setInstruction(instruction);
-        System.out.println(rs);
         rs.setBusy(true);
         rs.setOperation(op);
+
+        // Set up source operands for comparison
         rs.setVj(registerFile.getValue(dest));
         rs.setVk(src1 != null ? registerFile.getValue(src1) : "");
         rs.setQj(registerFile.getStatus(dest));
         rs.setQk(src1 != null ? registerFile.getStatus(src1) : "");
+
         rs.setCycles(operations.get(op));
         rs.setTarget(src2);
-//        registerFile.setStatus(src2, rs.getName());
+
         instruction.setIssueTime(currentCycle);
-
-
+        System.out.println("Branch instruction issued: " + instruction.getInstruction());
     }
 
 
@@ -1166,55 +1176,192 @@ private boolean isProgramComplete() {
         }
     }
 
-    private void performOperation(ReservationStation rs) {
-        String operation = rs.getOperation();
+//    private void performOperation(ReservationStation rs) {
+//        String operation = rs.getOperation();
+//        double vj = parseFloat(rs.getVj());
+//        double vk = parseFloat(rs.getVk());
+//        double result = 0;
+//
+//        switch (operation) {
+//            case "ADD":
+//            case "ADDI":
+//            case "DADDI":
+//                result = vj + vk;
+//                break;
+//            case "SUB":
+//            case "SUBI":
+//            case "DSUBI":
+//                result = vj - vk;
+//                break;
+//            case "MUL":
+//            case "MUL.D":
+//            case "MUL.S":
+//                result = vj * vk;
+//                break;
+//            case "DIV":
+//            case "DIV.D":
+//            case "DIV.S":
+//                if (vk != 0) {
+//                    result = vj / vk;
+//                } else {
+//                    System.err.println("Error: Division by zero");
+//                    result = Double.NaN;
+//                }
+//                break;
+//            case "ADD.D":
+//            case "ADD.S":
+//                result = vj + vk;
+//                break;
+//            case "SUB.D":
+//            case "SUB.S":
+//                result = vj - vk;
+//                break;
+//            default:
+//                System.err.println("Unknown operation: " + operation);
+//                result = Double.NaN;
+//        }
+//
+//        rs.setResult(result);
+//    }
+private void performOperation(ReservationStation rs) {
+    String operation = rs.getOperation();
+    double result = 0;
+
+    try {
+        // Special handling for branch instructions
+        if (operation.equals("BEQ") || operation.equals("BNE")) {
+            // For branch instructions, we only need to perform the comparison
+            // The actual branch logic is handled in doBranch method
+            double vj = parseFloat(rs.getVj());
+            double vk = parseFloat(rs.getVk());
+            // Store comparison result (1 for true, 0 for false)
+            result = (vj == vk) ? 1 : 0;
+            rs.setResult(Double.parseDouble(String.valueOf(result)));
+            return;
+        }
+
+        // Regular arithmetic operations
         double vj = parseFloat(rs.getVj());
         double vk = parseFloat(rs.getVk());
-        double result = 0;
 
         switch (operation) {
+            // Integer operations
             case "ADD":
             case "ADDI":
             case "DADDI":
                 result = vj + vk;
+                if (operation.equals("ADD") || operation.equals("ADDI")) {
+                    result = (int)result; // Ensure integer result
+                }
                 break;
+
             case "SUB":
             case "SUBI":
             case "DSUBI":
                 result = vj - vk;
+                if (operation.equals("SUB") || operation.equals("SUBI")) {
+                    result = (int)result; // Ensure integer result
+                }
                 break;
+
+            // Floating point operations
+            case "ADD.D":
+            case "ADD.S":
+                result = vj + vk;
+                break;
+
+            case "SUB.D":
+            case "SUB.S":
+                result = vj - vk;
+                break;
+
             case "MUL":
             case "MUL.D":
             case "MUL.S":
                 result = vj * vk;
+                if (operation.equals("MUL")) {
+                    result = (int)result; // Ensure integer result
+                }
                 break;
+
             case "DIV":
             case "DIV.D":
             case "DIV.S":
                 if (vk != 0) {
                     result = vj / vk;
+                    if (operation.equals("DIV")) {
+                        result = (int)result; // Ensure integer result
+                    }
                 } else {
                     System.err.println("Error: Division by zero");
                     result = Double.NaN;
                 }
                 break;
-            case "ADD.D":
-            case "ADD.S":
-                result = vj + vk;
-                break;
-            case "SUB.D":
-            case "SUB.S":
-                result = vj - vk;
-                break;
+
             default:
                 System.err.println("Unknown operation: " + operation);
                 result = Double.NaN;
         }
 
-        rs.setResult(result);
+        // Format the result based on operation type
+        if (operation.endsWith(".D") || operation.endsWith(".S")) {
+            // For floating point operations, maintain decimal precision
+            rs.setResult(Double.parseDouble(String.format("%.2f", result)));
+        } else {
+            // For integer operations, remove decimal part
+            rs.setResult(Double.parseDouble(String.valueOf((int)result)));
+        }
+
+    } catch (NumberFormatException e) {
+        System.err.println("Error parsing operands for " + operation);
+        rs.setResult(Double.parseDouble("NaN"));
     }
+}
 
-
+//    private void doBranch(BranchStation branchStation) {
+//        String op = branchStation.getOperation();
+//        String target = branchStation.getTarget();
+//        String src1 = branchStation.getVj();
+//        String src2 = branchStation.getVk();
+//
+//        // Convert target to an address or instruction index
+//        int targetAddress = getAddressFromLabel(target);
+//
+//        if (targetAddress == -1) {
+//            // Handle the case where the label is not found
+//            System.err.println("Error: Label " + target + " not found.");
+//            return;
+//        }
+//
+//        currentInstruction = branchCurrentInstruction;
+//        boolean conditionMet = false;
+//        if (op.equals("BEQ")) {
+//            conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
+//        } else if (op.equals("BNE")) {
+//            conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
+//        }
+//
+//        if (conditionMet) {
+//            // Set current instruction to the target of the branch
+//            System.out.println("Branch taken to instruction " + targetAddress);
+//            currentInstruction = targetAddress;
+//
+//            // Increment the iteration count for the target instruction and re-issue it
+////            InstructionEntry loopInstruction = instructions.get(targetAddress);
+////            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
+//            loop++;
+//
+//
+//        } else {
+//            // Move to the next instruction
+//            currentInstruction++;
+//        }
+//
+//        // Set issue time for the current instruction
+//        branchStation.getInstruction().setWriteTime(currentCycle);
+//        branchStation.clear();
+//        updateDisplay();
+//    }
     private void doBranch(BranchStation branchStation) {
         String op = branchStation.getOperation();
         String target = branchStation.getTarget();
@@ -1225,14 +1372,14 @@ private boolean isProgramComplete() {
         int targetAddress = getAddressFromLabel(target);
 
         if (targetAddress == -1) {
-            // Handle the case where the label is not found
             System.err.println("Error: Label " + target + " not found.");
             return;
         }
 
         currentInstruction = branchCurrentInstruction;
-        // Check the condition
         boolean conditionMet = false;
+
+        // Evaluate branch condition
         if (op.equals("BEQ")) {
             conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
         } else if (op.equals("BNE")) {
@@ -1240,26 +1387,25 @@ private boolean isProgramComplete() {
         }
 
         if (conditionMet) {
-            // Set current instruction to the target of the branch
+            System.out.println("Branch taken to instruction " + targetAddress);
+            // Update loop counter and instruction pointer
+            if (targetAddress <= currentInstruction) {
+                // Only increment loop counter if branching backwards (loop behavior)
+                loop++;
+                System.out.println("Loop iteration: " + loop);
+            }
             currentInstruction = targetAddress;
-
-            // Increment the iteration count for the target instruction and re-issue it
-//            InstructionEntry loopInstruction = instructions.get(targetAddress);
-//            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
-            loop++;
-
-
+            lastBranchTaken = true;
         } else {
-            // Move to the next instruction
+            System.out.println("Branch not taken");
             currentInstruction++;
+            lastBranchTaken = false;
         }
 
-        // Set issue time for the current instruction
+        // Mark instruction completion
         branchStation.getInstruction().setWriteTime(currentCycle);
         branchStation.clear();
-        updateDisplay();
     }
-
     private void writeResults() {
 
         if (branchStations.getFirst().isReadyToWrite()) {

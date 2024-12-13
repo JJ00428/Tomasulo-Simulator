@@ -14,12 +14,6 @@ public class RegisterFile {
             String regName = "F" + i;
             values.put(regName, "0.0");
             status.put(regName, "");
-            if(i == 6){
-                values.put("F" + i, "2.0");
-            }
-            if(i == 20){
-                values.put("F" + i, "1.0");
-            }
         }
     }
 
