@@ -77,8 +77,7 @@ public class SimulationController {
         if (root.getCenter() == configView) {
             root.setCenter(simView);
             handleReset();
-        } else
-            root.setCenter(configView);
+        } else root.setCenter(configView);
     }
 
     public BorderPane createView() {
@@ -334,6 +333,7 @@ public class SimulationController {
 
         leftBox.getChildren().add(memoryBox);
     }
+
     private void setupCacheTable(VBox leftBox) {
         cacheTable = new TableView<>();
 
@@ -448,12 +448,7 @@ public class SimulationController {
         if (config.cacheParams.isEmpty())
             cache = new Cache(32, 4, 1, 10, memory); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
         else
-            cache = new Cache(config.cacheParams.get("size"),
-                    config.cacheParams.get("blockSize"),
-                    config.cacheParams.get("hitLatency"),
-                    config.cacheParams.get("missLatency"),
-                    memory
-            );
+            cache = new Cache(config.cacheParams.get("size"), config.cacheParams.get("blockSize"), config.cacheParams.get("hitLatency"), config.cacheParams.get("missLatency"), memory);
 
         // Initialize memory
 
@@ -557,9 +552,9 @@ public class SimulationController {
                 issueInstruction(instructions.get(currentInstruction));
                 String[] parts = instruction.getInstruction().split(" ");
                 String op = parts[0];
-                if (op.equals("BNE") || op.equals("BEQ")){
+                if (op.equals("BNE") || op.equals("BEQ")) {
                     branchCurrentInstruction = currentInstruction;
-                    currentInstruction= Integer.MAX_VALUE;
+                    currentInstruction = Integer.MAX_VALUE;
 
                 }
                 if (!(op.equals("BNE") || op.equals("BEQ"))) {
@@ -574,8 +569,7 @@ public class SimulationController {
         //Write
         writeResults();
 
-        // Update cache status
-        updateCache();
+
 
     }
 
@@ -614,14 +608,13 @@ public class SimulationController {
         //is there an empty reservation station or buffer for this instruction?
         if (op.equals("ADD.D") || op.equals("ADD.S") || op.equals("SUB.D") || op.equals("SUB.S")) {
             return hasAvailableStation(addSubStations);
-        } else if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") ||
-                op.equals("DADDI") || op.equals("DSUBI")) {
+        } else if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") || op.equals("DADDI") || op.equals("DSUBI")) {
             return hasAvailableStation(intAddSubStations);
         } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
             return hasAvailableStation(mulDivStations);
         } else if (op.equals("MUL") || op.equals("DIV")) {
             return hasAvailableStation(intMulDivStations);
-        } else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
+        } else if (op.equals("LD") || op.equals("LW") || op.equals("L.S") || op.equals("L.D")) {
             int effectiveAddress = calculateEffectiveAddress(src1);
             for (StoreBuffer sb : storeBuffers) {
                 if (sb.isBusy() && sb.getAddress() == effectiveAddress) {
@@ -634,7 +627,7 @@ public class SimulationController {
                 }
             }
             return false;
-        } else if (op.equals("S.D") || op.equals("SW") || op.equals("S.S")) {
+        } else if (op.equals("SD") || op.equals("SW") || op.equals("S.S") || op.equals("S.D")) {
             int effectiveAddress = calculateEffectiveAddress(dest);
             for (LoadBuffer lb : loadBuffers) {
                 if (lb.isBusy() && lb.getAddress() == effectiveAddress) {
@@ -670,8 +663,7 @@ public class SimulationController {
         String src1 = parts.length > 2 ? parts[2].replace(",", "") : "";
         String src2 = parts.length > 3 ? parts[3].replace(",", "") : "";
 
-        if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") ||
-                op.equals("DADDI") || op.equals("DSUBI")) {
+        if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") || op.equals("DADDI") || op.equals("DSUBI")) {
             issueToIntAddSubStation(instruction, op, dest, src1, src2);
         } else if (op.equals("MUL") || op.equals("DIV")) {
             issueToIntMulDivStation(instruction, op, dest, src1, src2);
@@ -679,10 +671,18 @@ public class SimulationController {
             issueToAddSubStation(instruction, op, dest, src1, src2);
         } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
             issueToMulDivStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("L.D") || op.equals("LW") || op.equals("L.S")) {
-            issueToLoadBuffer(instruction, dest, src1);
-        } else if (op.equals("S.D") || op.equals("SW") || op.equals("S.S")) {
-            issueToStoreBuffer(instruction, src1, dest);
+        } else if (op.equals("L.D") || op.equals("L.S")) {
+            LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
+            issueToLoadBuffer(instruction, dest, src1, lb);
+        } else if (op.equals("LW") || op.equals("LD")) {
+            LoadBuffer lb = firstAvailableLoadBuffer(intLoadBuffers);
+            issueToLoadBuffer(instruction, dest, src1, lb);
+        } else if (op.equals("S.D") || op.equals("S.S")) {
+            StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
+            issueToStoreBuffer(instruction, src1, dest, sb);
+        } else if (op.equals("SW") || op.equals("SD")) {
+            StoreBuffer sb = firstAvailableStoreBuffer(intStoreBuffers);
+            issueToStoreBuffer(instruction, src1, dest, sb);
         } else if (op.equals("BEQ") || op.equals("BNE")) {
             issueToBranch(instruction, op, dest, src1, src2);
         }
@@ -776,8 +776,7 @@ public class SimulationController {
     }
 
 
-    private void issueToAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String
-            src2) {
+    private void issueToAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = firstAvailableStation(addSubStations);
 
         if (rs == null) return;
@@ -795,8 +794,7 @@ public class SimulationController {
         instruction.setIssueTime(currentCycle);
     }
 
-    private void issueToMulDivStation(InstructionEntry instruction, String op, String dest, String src1, String
-            src2) {
+    private void issueToMulDivStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
         ReservationStation rs = firstAvailableStation(mulDivStations);
         rs.setInstruction(instruction);
         rs.setBusy(true);
@@ -851,19 +849,31 @@ public class SimulationController {
             int offset = Integer.parseInt(parts[0]); // Offset remains an integer
             String register = parts[1];
 
+            if (!register.startsWith("R")) {
+                System.out.println("Invalid register for address calculation: " + register);
+                // Convert register value to double and cast to int
+                double registerValue = Double.parseDouble(registerFile.getValue(register));
+                int baseAddress = (int) Math.floor(registerValue);
+
+                return baseAddress + offset;
+            }
+            else{
+
+
             // Convert register value to double and cast to int
-            double registerValue = Double.parseDouble(registerFile.getValue(register));
-            int baseAddress = (int) Math.floor(registerValue);
+//            double registerValue = Double.parseDouble(registerFile.getValue(register));
+            int baseAddress = Integer.parseInt(registerFile.getValue(register));
 
             return baseAddress + offset;
+            }
         } else {
-            return Integer.parseInt(addressString); // For standalone addresses
+            String value = registerFile.getValue(addressString);
+            return Integer.parseInt(value); // For standalone addresses
         }
     }
 
 
-    private void issueToLoadBuffer(InstructionEntry instruction, String dest, String addressString) {
-        LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
+    private void issueToLoadBuffer(InstructionEntry instruction, String dest, String addressString, LoadBuffer lb) {
         if (lb == null) return;
         lb.setInstruction(instruction);
         lb.setBusy(true);
@@ -873,8 +883,7 @@ public class SimulationController {
         instruction.setIssueTime(currentCycle);
     }
 
-    private void issueToStoreBuffer(InstructionEntry instruction, String src, String addressString) {
-        StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
+    private void issueToStoreBuffer(InstructionEntry instruction, String src, String addressString, StoreBuffer sb) {
         if (sb == null) return;
         sb.setInstruction(instruction);
         sb.setBusy(true);
@@ -952,10 +961,48 @@ public class SimulationController {
                 }
             }
         }
+
+        for (LoadBuffer lb : intLoadBuffers) {
+            if (lb.isBusy() && !lb.isReadyToWrite()) {
+                if (lb.getInstruction().getIssueTime() == currentCycle) {
+                    continue; //skip
+                }
+                int accessTime = cache.getAccessTime(lb.getAddress());
+                if (lb.getCycles() == 0) {
+                    lb.setCycles(accessTime);
+                }
+                if (lb.getCycles() > 0) {
+                    lb.setCycles(lb.getCycles() - 1);
+                }
+                if (lb.getCycles() == 0 && lb.getInstruction().getExecuteTime() == -1) {
+                    lb.setReadyToWrite(true);
+                    lb.getInstruction().setExecuteTime(currentCycle);
+                }
+            }
+        }
     }
 
     private void executeStoreBuffers() {
         for (StoreBuffer sb : storeBuffers) {
+            if (sb.isBusy() && sb.getQ().isEmpty()) {
+                if (sb.getInstruction().getIssueTime() == currentCycle) {
+                    continue; //skip
+                }
+                int accessTime = cache.getAccessTime(sb.getAddress());
+                if (sb.getCycles() == 0) {
+                    sb.setCycles(accessTime);
+                }
+                if (sb.getCycles() > 0) {
+                    sb.setCycles(sb.getCycles() - 1);
+                }
+                if (sb.getCycles() == 0 && sb.getInstruction().getExecuteTime() == -1) {
+                    sb.setReadyToWrite(true);
+                    sb.getInstruction().setExecuteTime(currentCycle);
+                }
+            }
+        }
+
+        for (StoreBuffer sb : intStoreBuffers) {
             if (sb.isBusy() && sb.getQ().isEmpty()) {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
@@ -1039,7 +1086,7 @@ public class SimulationController {
             return;
         }
 
-        currentInstruction=branchCurrentInstruction;
+        currentInstruction = branchCurrentInstruction;
         // Check the condition
         boolean conditionMet = false;
         if (op.equals("BEQ")) {
@@ -1071,11 +1118,23 @@ public class SimulationController {
 
     private void writeResults() {
 
-       if (branchStations.getFirst().isReadyToWrite()) {
-           doBranch(branchStations.getFirst());
-       }
+        if (branchStations.getFirst().isReadyToWrite()) {
+            doBranch(branchStations.getFirst());
+        }
 
+        List<ExecutionUnit> readyStoreUnits = new ArrayList<>();
+        List<ExecutionUnit> integerReadyStoreUnits = new ArrayList<>();
 
+        collectReadyUnits(storeBuffers, readyStoreUnits);
+        collectReadyUnits(intStoreBuffers, integerReadyStoreUnits);
+
+        for(ExecutionUnit unit : readyStoreUnits){
+            writeBack(unit);
+        }
+
+        for(ExecutionUnit unit : integerReadyStoreUnits){
+            writeBack(unit);
+        }
 
         List<ExecutionUnit> readyUnits = new ArrayList<>();
         List<ExecutionUnit> integerReadyUnits = new ArrayList<>();
@@ -1084,12 +1143,10 @@ public class SimulationController {
         collectReadyUnits(addSubStations, readyUnits);
         collectReadyUnits(mulDivStations, readyUnits);
         collectReadyUnits(loadBuffers, readyUnits);
-        collectReadyUnits(storeBuffers, readyUnits);
 
         collectReadyUnits(intAddSubStations, integerReadyUnits);
         collectReadyUnits(intMulDivStations, integerReadyUnits);
         collectReadyUnits(intLoadBuffers, integerReadyUnits);
-        collectReadyUnits(intStoreBuffers, integerReadyUnits);
 
         //fix if there are multiple registers ready to write use FIFO
         //Floats
@@ -1135,17 +1192,15 @@ public class SimulationController {
         }
     }
 
-//    private void collectBranchReadyUnits(List<? extends BranchStation> units, List<BranchStation> readyUnits) {
-//        for (BranchStation unit : units) {
-//            if (unit.isReadyToWrite()) {
-//                readyUnits.add(unit);
-//            }
-//        }
-//    }
 
+    private void writeBack(ExecutionUnit unit){
+        unit.getInstruction().setWriteTime(currentCycle);
+
+        //clear the unit
+        unit.clear();
+    }
 
     private void writeResult(ExecutionUnit unit) {
-//        ExecutionUnit unit = findExecutionUnit(unitName);
         if (unit != null) {
             //give value to all that needs them/ put on bus
             updateDependentUnits(unit);
@@ -1180,9 +1235,18 @@ public class SimulationController {
         //give value to all rs that need it
         updateWaitingUnits(addSubStations, completedUnit);
         updateWaitingUnits(mulDivStations, completedUnit);
+        updateWaitingUnits(intAddSubStations, completedUnit);
+        updateWaitingUnits(intMulDivStations, completedUnit);
 
         //give value to all store that need it
         for (StoreBuffer sb : storeBuffers) {
+            if (sb.getQ().equals(completedUnit.getName())) {
+                sb.setQ("");
+                sb.setValue(Double.parseDouble(completedUnit.getResult()));
+            }
+        }
+
+        for (StoreBuffer sb : intStoreBuffers) {
             if (sb.getQ().equals(completedUnit.getName())) {
                 sb.setQ("");
                 sb.setValue(Double.parseDouble(completedUnit.getResult()));
@@ -1203,9 +1267,6 @@ public class SimulationController {
         }
     }
 
-    private void updateCache() {
-        // Update cache state based on memory accesses
-    }
 
     private void updateDisplay() {
         cycleLabel.setText("Cycle " + currentCycle);
