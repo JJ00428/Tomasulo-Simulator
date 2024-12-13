@@ -469,35 +469,22 @@ public class SimulationController {
 
     private void setupInitialValues() {
         loop = 1;
-        // Set up default operations
-//        operations.put("ADD", 2);
-//        operations.put("SUB", 2);
-//        operations.put("MUL", 10);
-//        operations.put("DIV", 40);
-        operations.put("L.D", 2);
-        operations.put("S.D", 2);
-//        operations.put("ADDI", 1);
-//        operations.put("SUBI", 1);
-        operations.put("DADDI", 2);
-        operations.put("DSUBI", 1);
-        operations.put("ADD.D", 2);
-        operations.put("ADD.S", 2);
-        operations.put("SUB.D", 2);
-        operations.put("SUB.S", 2);
-        operations.put("MUL.D", 10);
-        operations.put("MUL.S", 10);
-        operations.put("DIV.D", 40);
-        operations.put("DIV.S", 40);
-        operations.put("LW", 2);
-        operations.put("LD", 2);
-        operations.put("L.S", 2);
-        operations.put("SW", 2);
-        operations.put("SD", 2);
-        operations.put("S.S", 2);
-        operations.put("BEQ", 2);
-        operations.put("BNE", 2);
-        if (!config.operations.isEmpty()) operations = config.operations;
-
+        if (!config.operations.isEmpty()){
+            operations.put("DADDI", 2);
+            operations.put("DSUBI", 1);
+            operations.put("ADD.D", 2);
+            operations.put("ADD.S", 2);
+            operations.put("SUB.D", 2);
+            operations.put("SUB.S", 2);
+            operations.put("MUL.D", 10);
+            operations.put("MUL.S", 10);
+            operations.put("DIV.D", 40);
+            operations.put("DIV.S", 40);
+            operations.put("BEQ", 2);
+            operations.put("BNE", 2);
+        }else{
+            operations = config.operations;
+        }
         // Initialize cache
         if (config.cacheParams.isEmpty()) {
             cache = new Cache(32, 4, 1, 10, memory);

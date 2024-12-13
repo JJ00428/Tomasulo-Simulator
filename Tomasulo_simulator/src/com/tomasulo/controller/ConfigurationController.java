@@ -578,14 +578,6 @@ public class ConfigurationController {
         operations.put("MUL.S", Integer.parseInt(mulLatency.getText()));
         operations.put("DIV.D", Integer.parseInt(divLatency.getText()));
         operations.put("DIV.S", Integer.parseInt(divLatency.getText()));
-//        operations.put("LW", Integer.parseInt(intLoadLatency.getText()));
-//        operations.put("LD", Integer.parseInt(intLoadLatency.getText()));
-//        operations.put("L.D", Integer.parseInt(loadLatency.getText()));
-//        operations.put("L.S", Integer.parseInt(loadLatency.getText()));
-//        operations.put("SW", Integer.parseInt(intStoreLatency.getText()));
-//        operations.put("SD", Integer.parseInt(intStoreLatency.getText()));
-//        operations.put("S.D", Integer.parseInt(storeLatency.getText()));
-//        operations.put("S.S", Integer.parseInt(storeLatency.getText()));
         operations.put("BEQ", Integer.parseInt(branchLatency.getText()));
         operations.put("BNE", Integer.parseInt(branchLatency.getText()));
     }
