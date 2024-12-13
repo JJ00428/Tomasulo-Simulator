@@ -604,6 +604,7 @@ public class SimulationController {
         updateWaitingUnits(mulDivStations, completedUnit);
         updateWaitingUnits(intAddSubStations, completedUnit);
         updateWaitingUnits(intMulDivStations, completedUnit);
+        updateWaitingUnits(branchStations, completedUnit);
 
         //give value to all store that need it
         for (StoreBuffer sb : storeBuffers) {
