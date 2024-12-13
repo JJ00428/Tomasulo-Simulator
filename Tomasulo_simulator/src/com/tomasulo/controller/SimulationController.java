@@ -1333,8 +1333,8 @@ public class SimulationController {
         String target = branchStation.getTarget();
         String src1 = branchStation.getVj();
         String src2 = branchStation.getVk();
-        System.out.println("src1: " + src1);
-        System.out.println("src2: " + src2);
+        System.out.println("src1: " + "R"+src1);
+        System.out.println("src2: " + "R"+src2);
 
         // Convert target to an address or instruction index
         int targetAddress = getAddressFromLabel(target);
@@ -1353,11 +1353,11 @@ public class SimulationController {
         System.out.println(op.length());
         // Evaluate branch condition
         if (op.equals("BEQ")) {
-            conditionMet = intRegisterFile.getValue(src1).equals(intRegisterFile.getValue(src2));
+            conditionMet = src1.equals(src2);
         } else if (op.equals("BNE")) {
             System.out.println("First val: " + intRegisterFile.getValue(src1));
             System.out.println("Second val: " + intRegisterFile.getValue(src2));
-            conditionMet = !intRegisterFile.getValue(src1).equals(intRegisterFile.getValue(src2));
+            conditionMet = !src1.equals(src2);
         }
 
         if (conditionMet) {
