@@ -1133,7 +1133,7 @@ public class SimulationController {
     }
     private void executeStoreBuffers() {
         for (StoreBuffer sb : storeBuffers) {
-            if (sb.isBusy() && sb.getQ().isEmpty()) {
+            if (sb.isBusy() && sb.getQ().isEmpty()&& !sb.isReadyToWrite()) {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
@@ -1155,7 +1155,7 @@ public class SimulationController {
         }
 
         for (StoreBuffer sb : intStoreBuffers) {
-            if (sb.isBusy() && sb.getQ().isEmpty()) {
+            if (sb.isBusy() && sb.getQ().isEmpty()&& !sb.isReadyToWrite()) {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
@@ -1356,15 +1356,24 @@ public class SimulationController {
     }
     private void writeResults() {
 
-        if (branchStations.getFirst().isReadyToWrite()) {
+        if (!branchStations.isEmpty() && branchStations.getFirst().isReadyToWrite()) {
             doBranch(branchStations.getFirst());
         }
 
         List<ExecutionUnit> readyStoreUnits = new ArrayList<>();
         List<ExecutionUnit> integerReadyStoreUnits = new ArrayList<>();
 
-        collectReadyUnits(storeBuffers, readyStoreUnits);
-        collectReadyUnits(intStoreBuffers, integerReadyStoreUnits);
+        for (StoreBuffer unit : storeBuffers) {
+            if (unit.isReadyToWrite() && currentCycle != unit.getInstruction().getExecuteTime()) {
+                readyStoreUnits.add(unit);
+            }
+        }
+
+        for (StoreBuffer unit : intStoreBuffers) {
+            if (unit.isReadyToWrite() && currentCycle != unit.getInstruction().getExecuteTime()) {
+                integerReadyStoreUnits.add(unit);
+            }
+        }
 
         for (ExecutionUnit unit : readyStoreUnits) {
             writeBack(unit);
