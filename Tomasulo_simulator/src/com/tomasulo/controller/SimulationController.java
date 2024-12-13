@@ -450,17 +450,21 @@ public class SimulationController {
 
         rightBox.getChildren().addAll(registerBox, intRegisterBox);
     }
+
+
+
+
     private void setupInitialValues() {
         loop = 1;
         // Set up default operations
-        operations.put("ADD", 2);
-        operations.put("SUB", 2);
-        operations.put("MUL", 10);
-        operations.put("DIV", 40);
+//        operations.put("ADD", 2);
+//        operations.put("SUB", 2);
+//        operations.put("MUL", 10);
+//        operations.put("DIV", 40);
         operations.put("L.D", 2);
         operations.put("S.D", 2);
-        operations.put("ADDI", 1);
-        operations.put("SUBI", 1);
+//        operations.put("ADDI", 1);
+//        operations.put("SUBI", 1);
         operations.put("DADDI", 2);
         operations.put("DSUBI", 1);
         operations.put("ADD.D", 2);
@@ -517,6 +521,10 @@ public class SimulationController {
         int numMulDiv = config.bufferSizes.getOrDefault("mulDiv", 3);
         int numLoad = config.bufferSizes.getOrDefault("load", 3);
         int numStore = config.bufferSizes.getOrDefault("store", 3);
+        int numIntAddSub = config.bufferSizes.getOrDefault("intAddSub", 2);
+        int numIntMulDiv = config.bufferSizes.getOrDefault("intMulDiv", 2);
+        int numIntLoad = config.bufferSizes.getOrDefault("intLoad", 2);
+        int numIntStore = config.bufferSizes.getOrDefault("intStore", 2);
         int numBranch = config.bufferSizes.getOrDefault("branch", 1);
 
         // Initialize floating-point reservation stations
@@ -528,20 +536,26 @@ public class SimulationController {
         }
 
         // Initialize integer reservation stations
-        for (int i = 0; i < numAddSub; i++) {
+        for (int i = 0; i < numIntAddSub; i++) {
             intAddSubStations.add(new ReservationStation("IntAdd" + (i + 1)));
         }
-        for (int i = 0; i < numMulDiv; i++) {
+        for (int i = 0; i < numIntMulDiv; i++) {
             intMulDivStations.add(new ReservationStation("IntMul" + (i + 1)));
         }
 
         // Initialize load/store buffers
         for (int i = 0; i < numLoad; i++) {
             loadBuffers.add(new LoadBuffer("Load" + (i + 1)));
-            intLoadBuffers.add(new LoadBuffer("IntLoad" + (i + 1)));
         }
         for (int i = 0; i < numStore; i++) {
             storeBuffers.add(new StoreBuffer("Store" + (i + 1)));
+        }
+
+        // Initialize Integer load/store buffers
+        for (int i = 0; i < numIntLoad; i++) {
+            intLoadBuffers.add(new LoadBuffer("IntLoad" + (i + 1)));
+        }
+        for (int i = 0; i < numIntStore; i++) {
             intStoreBuffers.add(new StoreBuffer("IntStore" + (i + 1)));
         }
 

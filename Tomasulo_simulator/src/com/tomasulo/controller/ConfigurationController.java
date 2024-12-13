@@ -20,8 +20,15 @@ import java.util.Map;
 
 public class ConfigurationController {
     private TextField addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency;
-    private TextField cacheSize, blockSize, hitLatency, missLatency;
+    private TextField intAddLatency, intSubLatency, intMulLatency, intDivLatency, intLoadLatency, intStoreLatency;
+    private TextField branchLatency;
+
     private TextField addSubStations, mulDivStations, loadBuffers, storeBuffers;
+    private TextField intAddSubStations, intMulDivStations, intLoadBuffers, intStoreBuffers;
+    private TextField branchStation;
+
+    private TextField cacheSize, blockSize, hitLatency, missLatency;
+
     private Label toaster;
     private TableView<MemoryEntry> memoryTable;
     private ObservableList<MemoryEntry> memoryData;
@@ -225,6 +232,59 @@ public class ConfigurationController {
         storeBuffers = new TextField();
         grid.add(storeBuffers, 1, 16);
 
+        Label integerLabel = new Label("Integer Operations");
+        integerLabel.setStyle("-fx-font-weight: bold");
+        grid.add(integerLabel, 2, 0, 2, 1);
+
+        grid.add(new Label("INT ADD:"), 2, 1);
+        intAddLatency = new TextField();
+        grid.add(intAddLatency, 3, 1);
+
+        grid.add(new Label("INT SUB:"), 2, 2);
+        intSubLatency = new TextField();
+        grid.add(intSubLatency, 3, 2);
+
+        grid.add(new Label("INT MUL:"), 2, 3);
+        intMulLatency = new TextField();
+        grid.add(intMulLatency, 3, 3);
+
+        grid.add(new Label("INT DIV:"), 2, 4);
+        intDivLatency = new TextField();
+        grid.add(intDivLatency, 3, 4);
+
+        grid.add(new Label("INT LOAD:"), 2, 5);
+        intLoadLatency = new TextField();
+        grid.add(intLoadLatency, 3, 5);
+
+        grid.add(new Label("INT STORE:"), 2, 6);
+        intStoreLatency = new TextField();
+        grid.add(intStoreLatency, 3, 6);
+
+        grid.add(new Label("BRANCH:"), 2, 7);
+        branchLatency = new TextField();
+        grid.add(branchLatency, 3, 7);
+
+        // Integer Buffer Sizes
+        grid.add(new Label("Int Add/Sub Stations:"), 2, 13);
+        intAddSubStations = new TextField();
+        grid.add(intAddSubStations, 3, 13);
+
+        grid.add(new Label("Int Mul/Div Stations:"), 2, 14);
+        intMulDivStations = new TextField();
+        grid.add(intMulDivStations, 3, 14);
+
+        grid.add(new Label("Int Load Buffers:"), 2, 15);
+        intLoadBuffers = new TextField();
+        grid.add(intLoadBuffers, 3, 15);
+
+        grid.add(new Label("Int Store Buffers:"), 2, 16);
+        intStoreBuffers = new TextField();
+        grid.add(intStoreBuffers, 3, 16);
+
+        grid.add(new Label("Branch Station:"), 2, 17);
+        branchStation = new TextField();
+        grid.add(branchStation, 3, 17);
+
         leftSide.getChildren().add(grid);
 
         // Right side - Memory Configuration
@@ -293,12 +353,26 @@ public class ConfigurationController {
 
     public void setOperations(Map<String, Integer> operations) {
         this.operations = operations;
-        addLatency.setText(operations.get("ADD").toString());
-        subLatency.setText(operations.get("SUB").toString());
-        mulLatency.setText(operations.get("MUL").toString());
-        divLatency.setText(operations.get("DIV").toString());
-        loadLatency.setText(operations.get("L.D").toString());
-        storeLatency.setText(operations.get("S.D").toString());
+        addLatency.setText(operations.get("ADD.D").toString());
+        addLatency.setText(operations.get("ADD.S").toString());
+        subLatency.setText(operations.get("SUB.D").toString());
+        subLatency.setText(operations.get("SUB.S").toString());
+        mulLatency.setText(operations.get("MUL.D").toString());
+        mulLatency.setText(operations.get("MUL.S").toString());
+        divLatency.setText(operations.get("DIV.D").toString());
+        divLatency.setText(operations.get("DIV.S").toString());
+//        loadLatency.setText(operations.get("L.D").toString());
+//        loadLatency.setText(operations.get("L.S").toString());
+//        storeLatency.setText(operations.get("S.D").toString());
+//        storeLatency.setText(operations.get("S.S").toString());
+        intAddLatency.setText(operations.get("DADDI").toString());
+        intSubLatency.setText(operations.get("DSUBI").toString());
+//        intLoadLatency.setText(operations.get("LW").toString());
+//        intLoadLatency.setText(operations.get("LD").toString());
+//        intStoreLatency.setText(operations.get("SW").toString());
+//        intStoreLatency.setText(operations.get("SD").toString());
+        branchLatency.setText(operations.get("BEQ").toString());
+        branchLatency.setText(operations.get("BNE").toString());
     }
 
     public void setCacheParams(Map<String, Integer> cacheParams) {
@@ -315,11 +389,19 @@ public class ConfigurationController {
         mulDivStations.setText(bufferSizes.get("mulDiv").toString());
         loadBuffers.setText(bufferSizes.get("load").toString());
         storeBuffers.setText(bufferSizes.get("store").toString());
+        intAddSubStations.setText(bufferSizes.get("intAddSub").toString());
+        intMulDivStations.setText(bufferSizes.get("intMulDiv").toString());
+        intLoadBuffers.setText(bufferSizes.get("intLoad").toString());
+        intStoreBuffers.setText(bufferSizes.get("intStore").toString());
+        branchStation.setText(bufferSizes.get("branch").toString());
     }
 
     private void handleSave() {
-        TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency,
-                cacheSize, blockSize, hitLatency, missLatency, addSubStations, mulDivStations, loadBuffers, storeBuffers
+        TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency,
+                cacheSize, blockSize, hitLatency, missLatency,
+                addSubStations, mulDivStations, loadBuffers, storeBuffers,
+                intAddLatency, intSubLatency, intMulLatency, intDivLatency,branchLatency,
+                intAddSubStations, intMulDivStations, intLoadBuffers, intStoreBuffers,branchStation
         };
 
         // Check if required fields are filled
@@ -367,12 +449,26 @@ public class ConfigurationController {
     }
 
     private void updateOperations() {
-        operations.put("ADD", Integer.parseInt(addLatency.getText()));
-        operations.put("SUB", Integer.parseInt(subLatency.getText()));
-        operations.put("MUL", Integer.parseInt(mulLatency.getText()));
-        operations.put("DIV", Integer.parseInt(divLatency.getText()));
-        operations.put("L.D", Integer.parseInt(loadLatency.getText()));
-        operations.put("S.D", Integer.parseInt(storeLatency.getText()));
+        operations.put("DADDI", Integer.parseInt(intAddLatency.getText()));
+        operations.put("DSUBI", Integer.parseInt(intSubLatency.getText()));
+        operations.put("ADD.D", Integer.parseInt(addLatency.getText()));
+        operations.put("ADD.S", Integer.parseInt(addLatency.getText()));
+        operations.put("SUB.D", Integer.parseInt(subLatency.getText()));
+        operations.put("SUB.S", Integer.parseInt(subLatency.getText()));
+        operations.put("MUL.D", Integer.parseInt(mulLatency.getText()));
+        operations.put("MUL.S", Integer.parseInt(mulLatency.getText()));
+        operations.put("DIV.D", Integer.parseInt(divLatency.getText()));
+        operations.put("DIV.S", Integer.parseInt(divLatency.getText()));
+//        operations.put("LW", Integer.parseInt(intLoadLatency.getText()));
+//        operations.put("LD", Integer.parseInt(intLoadLatency.getText()));
+//        operations.put("L.D", Integer.parseInt(loadLatency.getText()));
+//        operations.put("L.S", Integer.parseInt(loadLatency.getText()));
+//        operations.put("SW", Integer.parseInt(intStoreLatency.getText()));
+//        operations.put("SD", Integer.parseInt(intStoreLatency.getText()));
+//        operations.put("S.D", Integer.parseInt(storeLatency.getText()));
+//        operations.put("S.S", Integer.parseInt(storeLatency.getText()));
+        operations.put("BEQ", Integer.parseInt(branchLatency.getText()));
+        operations.put("BNE", Integer.parseInt(branchLatency.getText()));
     }
 
     private void updateCacheParams() {
@@ -395,6 +491,11 @@ public class ConfigurationController {
         bufferSizes.put("mulDiv", Integer.parseInt(mulDivStations.getText()));
         bufferSizes.put("load", Integer.parseInt(loadBuffers.getText()));
         bufferSizes.put("store", Integer.parseInt(storeBuffers.getText()));
+        bufferSizes.put("intAddSub", Integer.parseInt(intAddSubStations.getText()));
+        bufferSizes.put("intMulDiv", Integer.parseInt(intMulDivStations.getText()));
+        bufferSizes.put("intLoad", Integer.parseInt(intLoadBuffers.getText()));
+        bufferSizes.put("intStore", Integer.parseInt(intStoreBuffers.getText()));
+        bufferSizes.put("branch", Integer.parseInt(branchStation.getText()));
     }
 
     private void updateMemory() {
