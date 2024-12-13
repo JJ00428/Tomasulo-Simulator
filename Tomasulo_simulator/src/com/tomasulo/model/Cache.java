@@ -84,7 +84,6 @@ public class Cache {
             return false;
         if(!isBusy(address)){
             setOccupier(address, occupierID);
-            return false;
         }
 
         int temp = address / blockSize;
@@ -182,6 +181,11 @@ public class Cache {
         validateAddress(address + 7);
         if (address % 8 != 0) {
             throw new IllegalArgumentException("Double address must be aligned to 8 bytes: " + address);
+        }
+    }
+    public void clear(){
+        for(int i = 0; i < blocks.length; i++){
+            blocks[i] = new CacheBlock(blockSize);
         }
     }
 

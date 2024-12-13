@@ -550,6 +550,7 @@ public class SimulationController {
         currentInstruction = 0;
         instructions.clear();
         memory.clear();
+        cache.clear();
         instructionTable.getItems().clear();
         setupInitialValues();
         updateDisplay();
@@ -1075,33 +1076,19 @@ public class SimulationController {
                 if (lb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
-                int accessTime = cache.getAccessTime(lb.getAddress());
-                if (lb.getCycles() == 0) {
-                    lb.setCycles(accessTime);
-                }
-                if (lb.getCycles() > 0) {
-                    lb.setCycles(lb.getCycles() - 1);
-                }
-                if (lb.getCycles() == 0 && lb.getInstruction().getExecuteTime() == -1) {
+                if(cache.requestWord(lb.getAddress(), lb.getName())){
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
             }
         }
-
+        // integer load buffer //
         for (LoadBuffer lb : intLoadBuffers) {
             if (lb.isBusy() && !lb.isReadyToWrite()) {
                 if (lb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
-                int accessTime = cache.getAccessTime(lb.getAddress());
-                if (lb.getCycles() == 0) {
-                    lb.setCycles(accessTime);
-                }
-                if (lb.getCycles() > 0) {
-                    lb.setCycles(lb.getCycles() - 1);
-                }
-                if (lb.getCycles() == 0 && lb.getInstruction().getExecuteTime() == -1) {
+                if(cache.requestWord(lb.getAddress(), lb.getName())){
                     lb.setReadyToWrite(true);
                     lb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1114,14 +1101,7 @@ public class SimulationController {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
-                int accessTime = cache.getAccessTime(sb.getAddress());
-                if (sb.getCycles() == 0) {
-                    sb.setCycles(accessTime);
-                }
-                if (sb.getCycles() > 0) {
-                    sb.setCycles(sb.getCycles() - 1);
-                }
-                if (sb.getCycles() == 0 && sb.getInstruction().getExecuteTime() == -1) {
+                if(cache.requestWord(sb.getAddress(), sb.getName())){
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
@@ -1133,14 +1113,7 @@ public class SimulationController {
                 if (sb.getInstruction().getIssueTime() == currentCycle) {
                     continue; //skip
                 }
-                int accessTime = cache.getAccessTime(sb.getAddress());
-                if (sb.getCycles() == 0) {
-                    sb.setCycles(accessTime);
-                }
-                if (sb.getCycles() > 0) {
-                    sb.setCycles(sb.getCycles() - 1);
-                }
-                if (sb.getCycles() == 0 && sb.getInstruction().getExecuteTime() == -1) {
+                if(cache.requestWord(sb.getAddress(), sb.getName())){
                     sb.setReadyToWrite(true);
                     sb.getInstruction().setExecuteTime(currentCycle);
                 }
