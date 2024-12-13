@@ -33,7 +33,13 @@ public class RegisterFile {
         status.put(register, statusValue);
     }
 
-    public void clearStatus(String register) {
-        status.put(register, "");
+    public void clearStatus(String tag, String value) {
+        for (Map.Entry<String, String> entry : status.entrySet()) {
+            if (entry.getValue().equals(tag)) {
+                entry.setValue("");
+                values.put(entry.getKey(), value);
+            }
+        }
+
     }
 }

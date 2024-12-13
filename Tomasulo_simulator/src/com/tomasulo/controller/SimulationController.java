@@ -469,22 +469,21 @@ public class SimulationController {
 
     private void setupInitialValues() {
         loop = 1;
-        if (!config.operations.isEmpty()){
-            operations.put("DADDI", 2);
-            operations.put("DSUBI", 1);
-            operations.put("ADD.D", 2);
-            operations.put("ADD.S", 2);
-            operations.put("SUB.D", 2);
-            operations.put("SUB.S", 2);
-            operations.put("MUL.D", 10);
-            operations.put("MUL.S", 10);
-            operations.put("DIV.D", 40);
-            operations.put("DIV.S", 40);
-            operations.put("BEQ", 2);
-            operations.put("BNE", 2);
-        }else{
-            operations = config.operations;
-        }
+        // Set up default operations
+        operations.put("DADDI", 2);
+        operations.put("DSUBI", 1);
+        operations.put("ADD.D", 2);
+        operations.put("ADD.S", 2);
+        operations.put("SUB.D", 2);
+        operations.put("SUB.S", 2);
+        operations.put("MUL.D", 10);
+        operations.put("MUL.S", 10);
+        operations.put("DIV.D", 40);
+        operations.put("DIV.S", 40);
+        operations.put("BEQ", 2);
+        operations.put("BNE", 2);
+        if (!config.operations.isEmpty()) operations = config.operations;
+
         // Initialize cache
         if (config.cacheParams.isEmpty()) {
             cache = new Cache(32, 4, 1, 10, memory);
@@ -588,7 +587,12 @@ public class SimulationController {
     //-------------------Scene Updates-------------------
     private void updateDependentUnits(ExecutionUnit completedUnit) {
         //update register file
-        registerFile.clearStatus(completedUnit.getName());
+        registerFile.clearStatus(completedUnit.getName(), completedUnit.getResult());
+//        registerFile.setValue(completedUnit.getName(),completedUnit.getResult());
+
+        intRegisterFile.clearStatus(completedUnit.getName(), completedUnit.getResult());
+//        intRegisterFile.setValue(completedUnit.getName(),completedUnit.getResult());
+
 
         //give value to all rs that need it
         updateWaitingUnits(addSubStations, completedUnit);
@@ -1226,6 +1230,7 @@ public class SimulationController {
         }
         executeInstructions();
         writeResults();
+//        updateDisplay();
         System.out.println("Current Instruction: " + currentInstruction);
         if (isProgramComplete()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -1439,6 +1444,8 @@ public class SimulationController {
         if (integerEarliestUnit != null) {
             writeResult(integerEarliestUnit);
         }
+
+
     }
     private void writeBack(ExecutionUnit unit) {
         unit.getInstruction().setWriteTime(currentCycle);
