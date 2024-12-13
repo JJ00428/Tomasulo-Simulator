@@ -61,7 +61,8 @@ public class SimulationController {
     private int loopStartIndex = -1;
     private int loopEndIndex = -1;
     private boolean lastBranchTaken = false;
-    Button stepButton ;
+    Button stepButton;
+
     public SimulationController() {
         root = new BorderPane();
         configView = config.createConfigView();
@@ -550,24 +551,6 @@ public class SimulationController {
         return nonLoopInstructions + loopInstructions;
     }
 
-
-//    private void handleLoadInstructions() {
-//        String[] lines = codeInput.getText().split("\n");
-//        instructions.clear();
-//        for (int i = 0; i < lines.length; i++) {
-//            instructions.add(new InstructionEntry(lines[i].trim(), loop, lines[i].trim())); // Initialize iteration to 1
-//        }
-//        instructionCount = instructions.size();
-//        currentInstruction = 0;
-//
-//        //to know they've been loaded successfully
-//        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-//        alert.setTitle("Instructions Loaded");
-//        alert.setHeaderText(null);
-//        alert.setContentText("Instructions have been successfully loaded.");
-//        alert.showAndWait();
-//    }
-
     private void handleLoadInstructions() {
         String[] lines = codeInput.getText().split("\n");
         instructions.clear();
@@ -617,7 +600,7 @@ public class SimulationController {
         return -1;
     }
 
-//    private void executeOneCycle() {
+    //    private void executeOneCycle() {
 //        //Issue
 //        //if there are instructions to issue, and there's a place for the one in turn, then issue it
 //        if (currentInstruction <( instructionCount * loop)) {
@@ -644,46 +627,46 @@ public class SimulationController {
 //        writeResults();
 //
 //    }
-private boolean isProgramComplete() {
+    private boolean isProgramComplete() {
 
-    if (currentInstruction < getTotalInstructionsCount()) {
-        return false;
-    }
-    System.out.println("Total Instructions: " + getTotalInstructionsCount());
+        if (currentInstruction < getTotalInstructionsCount()) {
+            return false;
+        }
+        System.out.println("Total Instructions: " + getTotalInstructionsCount());
 
-    for (ReservationStation rs : addSubStations) {
-        if (rs.isBusy()) return false;
-    }
-    for (ReservationStation rs : mulDivStations) {
-        if (rs.isBusy()) return false;
-    }
-    for (ReservationStation rs : intAddSubStations) {
-        if (rs.isBusy()) return false;
-    }
-    for (ReservationStation rs : intMulDivStations) {
-        if (rs.isBusy()) return false;
-    }
+        for (ReservationStation rs : addSubStations) {
+            if (rs.isBusy()) return false;
+        }
+        for (ReservationStation rs : mulDivStations) {
+            if (rs.isBusy()) return false;
+        }
+        for (ReservationStation rs : intAddSubStations) {
+            if (rs.isBusy()) return false;
+        }
+        for (ReservationStation rs : intMulDivStations) {
+            if (rs.isBusy()) return false;
+        }
 
-    for (LoadBuffer lb : loadBuffers) {
-        if (lb.isBusy()) return false;
-    }
-    for (LoadBuffer lb : intLoadBuffers) {
-        if (lb.isBusy()) return false;
-    }
+        for (LoadBuffer lb : loadBuffers) {
+            if (lb.isBusy()) return false;
+        }
+        for (LoadBuffer lb : intLoadBuffers) {
+            if (lb.isBusy()) return false;
+        }
 
-    for (StoreBuffer sb : storeBuffers) {
-        if (sb.isBusy()) return false;
-    }
-    for (StoreBuffer sb : intStoreBuffers) {
-        if (sb.isBusy()) return false;
-    }
+        for (StoreBuffer sb : storeBuffers) {
+            if (sb.isBusy()) return false;
+        }
+        for (StoreBuffer sb : intStoreBuffers) {
+            if (sb.isBusy()) return false;
+        }
 
-    for (BranchStation bs : branchStations) {
-        if (bs.isBusy()) return false;
-    }
+        for (BranchStation bs : branchStations) {
+            if (bs.isBusy()) return false;
+        }
 
-    return true;
-}
+        return true;
+    }
 
     private void executeOneCycle() {
         if (currentInstruction < getTotalInstructionsCount()) {
@@ -1010,15 +993,14 @@ private boolean isProgramComplete() {
                 int baseAddress = (int) Math.floor(registerValue);
 
                 return baseAddress + offset;
-            }
-            else{
+            } else {
 
 
-            // Convert register value to double and cast to int
+                // Convert register value to double and cast to int
 //            double registerValue = Double.parseDouble(registerFile.getValue(register));
-            int baseAddress = Integer.parseInt(registerFile.getValue(register));
+                int baseAddress = Integer.parseInt(registerFile.getValue(register));
 
-            return baseAddress + offset;
+                return baseAddress + offset;
             }
         } else {
             String value = registerFile.getValue(addressString);
@@ -1175,193 +1157,101 @@ private boolean isProgramComplete() {
             }
         }
     }
+    private void performOperation(ReservationStation rs) {
+        String operation = rs.getOperation();
+        double result = 0;
 
-//    private void performOperation(ReservationStation rs) {
-//        String operation = rs.getOperation();
-//        double vj = parseFloat(rs.getVj());
-//        double vk = parseFloat(rs.getVk());
-//        double result = 0;
-//
-//        switch (operation) {
-//            case "ADD":
-//            case "ADDI":
-//            case "DADDI":
-//                result = vj + vk;
-//                break;
-//            case "SUB":
-//            case "SUBI":
-//            case "DSUBI":
-//                result = vj - vk;
-//                break;
-//            case "MUL":
-//            case "MUL.D":
-//            case "MUL.S":
-//                result = vj * vk;
-//                break;
-//            case "DIV":
-//            case "DIV.D":
-//            case "DIV.S":
-//                if (vk != 0) {
-//                    result = vj / vk;
-//                } else {
-//                    System.err.println("Error: Division by zero");
-//                    result = Double.NaN;
-//                }
-//                break;
-//            case "ADD.D":
-//            case "ADD.S":
-//                result = vj + vk;
-//                break;
-//            case "SUB.D":
-//            case "SUB.S":
-//                result = vj - vk;
-//                break;
-//            default:
-//                System.err.println("Unknown operation: " + operation);
-//                result = Double.NaN;
-//        }
-//
-//        rs.setResult(result);
-//    }
-private void performOperation(ReservationStation rs) {
-    String operation = rs.getOperation();
-    double result = 0;
+        try {
+            // Special handling for branch instructions
+            if (operation.equals("BEQ") || operation.equals("BNE")) {
+                // For branch instructions, we only need to perform the comparison
+                // The actual branch logic is handled in doBranch method
+                double vj = parseFloat(rs.getVj());
+                double vk = parseFloat(rs.getVk());
+                // Store comparison result (1 for true, 0 for false)
+                result = (vj == vk) ? 1 : 0;
+                rs.setResult(Double.parseDouble(String.valueOf(result)));
+                return;
+            }
 
-    try {
-        // Special handling for branch instructions
-        if (operation.equals("BEQ") || operation.equals("BNE")) {
-            // For branch instructions, we only need to perform the comparison
-            // The actual branch logic is handled in doBranch method
+            // Regular arithmetic operations
             double vj = parseFloat(rs.getVj());
             double vk = parseFloat(rs.getVk());
-            // Store comparison result (1 for true, 0 for false)
-            result = (vj == vk) ? 1 : 0;
-            rs.setResult(Double.parseDouble(String.valueOf(result)));
-            return;
-        }
 
-        // Regular arithmetic operations
-        double vj = parseFloat(rs.getVj());
-        double vk = parseFloat(rs.getVk());
-
-        switch (operation) {
-            // Integer operations
-            case "ADD":
-            case "ADDI":
-            case "DADDI":
-                result = vj + vk;
-                if (operation.equals("ADD") || operation.equals("ADDI")) {
-                    result = (int)result; // Ensure integer result
-                }
-                break;
-
-            case "SUB":
-            case "SUBI":
-            case "DSUBI":
-                result = vj - vk;
-                if (operation.equals("SUB") || operation.equals("SUBI")) {
-                    result = (int)result; // Ensure integer result
-                }
-                break;
-
-            // Floating point operations
-            case "ADD.D":
-            case "ADD.S":
-                result = vj + vk;
-                break;
-
-            case "SUB.D":
-            case "SUB.S":
-                result = vj - vk;
-                break;
-
-            case "MUL":
-            case "MUL.D":
-            case "MUL.S":
-                result = vj * vk;
-                if (operation.equals("MUL")) {
-                    result = (int)result; // Ensure integer result
-                }
-                break;
-
-            case "DIV":
-            case "DIV.D":
-            case "DIV.S":
-                if (vk != 0) {
-                    result = vj / vk;
-                    if (operation.equals("DIV")) {
-                        result = (int)result; // Ensure integer result
+            switch (operation) {
+                // Integer operations
+                case "ADD":
+                case "ADDI":
+                case "DADDI":
+                    result = vj + vk;
+                    if (operation.equals("ADD") || operation.equals("ADDI")) {
+                        result = (int) result; // Ensure integer result
                     }
-                } else {
-                    System.err.println("Error: Division by zero");
+                    break;
+
+                case "SUB":
+                case "SUBI":
+                case "DSUBI":
+                    result = vj - vk;
+                    if (operation.equals("SUB") || operation.equals("SUBI")) {
+                        result = (int) result; // Ensure integer result
+                    }
+                    break;
+
+                // Floating point operations
+                case "ADD.D":
+                case "ADD.S":
+                    result = vj + vk;
+                    break;
+
+                case "SUB.D":
+                case "SUB.S":
+                    result = vj - vk;
+                    break;
+
+                case "MUL":
+                case "MUL.D":
+                case "MUL.S":
+                    result = vj * vk;
+                    if (operation.equals("MUL")) {
+                        result = (int) result; // Ensure integer result
+                    }
+                    break;
+
+                case "DIV":
+                case "DIV.D":
+                case "DIV.S":
+                    if (vk != 0) {
+                        result = vj / vk;
+                        if (operation.equals("DIV")) {
+                            result = (int) result; // Ensure integer result
+                        }
+                    } else {
+                        System.err.println("Error: Division by zero");
+                        result = Double.NaN;
+                    }
+                    break;
+
+                default:
+                    System.err.println("Unknown operation: " + operation);
                     result = Double.NaN;
-                }
-                break;
+            }
 
-            default:
-                System.err.println("Unknown operation: " + operation);
-                result = Double.NaN;
+            // Format the result based on operation type
+            if (operation.endsWith(".D") || operation.endsWith(".S")) {
+                // For floating point operations, maintain decimal precision
+                rs.setResult(Double.parseDouble(String.format("%.2f", result)));
+            } else {
+                // For integer operations, remove decimal part
+                rs.setResult(Double.parseDouble(String.valueOf((int) result)));
+            }
+
+        } catch (NumberFormatException e) {
+            System.err.println("Error parsing operands for " + operation);
+            rs.setResult(Double.parseDouble("NaN"));
         }
-
-        // Format the result based on operation type
-        if (operation.endsWith(".D") || operation.endsWith(".S")) {
-            // For floating point operations, maintain decimal precision
-            rs.setResult(Double.parseDouble(String.format("%.2f", result)));
-        } else {
-            // For integer operations, remove decimal part
-            rs.setResult(Double.parseDouble(String.valueOf((int)result)));
-        }
-
-    } catch (NumberFormatException e) {
-        System.err.println("Error parsing operands for " + operation);
-        rs.setResult(Double.parseDouble("NaN"));
     }
-}
 
-//    private void doBranch(BranchStation branchStation) {
-//        String op = branchStation.getOperation();
-//        String target = branchStation.getTarget();
-//        String src1 = branchStation.getVj();
-//        String src2 = branchStation.getVk();
-//
-//        // Convert target to an address or instruction index
-//        int targetAddress = getAddressFromLabel(target);
-//
-//        if (targetAddress == -1) {
-//            // Handle the case where the label is not found
-//            System.err.println("Error: Label " + target + " not found.");
-//            return;
-//        }
-//
-//        currentInstruction = branchCurrentInstruction;
-//        boolean conditionMet = false;
-//        if (op.equals("BEQ")) {
-//            conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
-//        } else if (op.equals("BNE")) {
-//            conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
-//        }
-//
-//        if (conditionMet) {
-//            // Set current instruction to the target of the branch
-//            System.out.println("Branch taken to instruction " + targetAddress);
-//            currentInstruction = targetAddress;
-//
-//            // Increment the iteration count for the target instruction and re-issue it
-////            InstructionEntry loopInstruction = instructions.get(targetAddress);
-////            loopInstruction.setIteration(loopInstruction.getIteration() + 1);
-//            loop++;
-//
-//
-//        } else {
-//            // Move to the next instruction
-//            currentInstruction++;
-//        }
-//
-//        // Set issue time for the current instruction
-//        branchStation.getInstruction().setWriteTime(currentCycle);
-//        branchStation.clear();
-//        updateDisplay();
-//    }
     private void doBranch(BranchStation branchStation) {
         String op = branchStation.getOperation();
         String target = branchStation.getTarget();
@@ -1406,6 +1296,7 @@ private void performOperation(ReservationStation rs) {
         branchStation.getInstruction().setWriteTime(currentCycle);
         branchStation.clear();
     }
+
     private void writeResults() {
 
         if (branchStations.getFirst().isReadyToWrite()) {
@@ -1418,11 +1309,11 @@ private void performOperation(ReservationStation rs) {
         collectReadyUnits(storeBuffers, readyStoreUnits);
         collectReadyUnits(intStoreBuffers, integerReadyStoreUnits);
 
-        for(ExecutionUnit unit : readyStoreUnits){
+        for (ExecutionUnit unit : readyStoreUnits) {
             writeBack(unit);
         }
 
-        for(ExecutionUnit unit : integerReadyStoreUnits){
+        for (ExecutionUnit unit : integerReadyStoreUnits) {
             writeBack(unit);
         }
 
@@ -1483,7 +1374,7 @@ private void performOperation(ReservationStation rs) {
     }
 
 
-    private void writeBack(ExecutionUnit unit){
+    private void writeBack(ExecutionUnit unit) {
         unit.getInstruction().setWriteTime(currentCycle);
 
         //clear the unit
