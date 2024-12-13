@@ -1,8 +1,18 @@
 package com.tomasulo.controller;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.geometry.Insets;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.util.Duration;
+import javafx.util.converter.IntegerStringConverter;
+import com.tomasulo.model.Memory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,25 +23,142 @@ public class ConfigurationController {
     private TextField cacheSize, blockSize, hitLatency, missLatency;
     private TextField addSubStations, mulDivStations, loadBuffers, storeBuffers;
     private Label toaster;
+    private TableView<MemoryEntry> memoryTable;
+    private ObservableList<MemoryEntry> memoryData;
+    private Memory memory;
 
     public Map<String, Integer> operations;
     public Map<String, Integer> cacheParams;
     public Map<String, Integer> bufferSizes;
-    public ConfigurationController(){
+
+    // Inner class for memory table entries
+    public static class MemoryEntry {
+        private final SimpleIntegerProperty address;
+        private final SimpleStringProperty hexValue;
+        private final SimpleStringProperty ascii;
+        private byte value;  // Store the actual byte value
+
+        public MemoryEntry(int address, byte value) {
+            this.address = new SimpleIntegerProperty(address);
+            this.value = value;
+            this.hexValue = new SimpleStringProperty(String.format("%02X", value & 0xFF));
+            this.ascii = new SimpleStringProperty(isPrintable(value) ? String.valueOf((char)value) : ".");
+        }
+
+        private boolean isPrintable(byte b) {
+            return b >= 32 && b <= 126;
+        }
+
+        public void setValue(byte value) {
+            this.value = value;
+            hexValue.set(String.format("%02X", value & 0xFF));
+            ascii.set(isPrintable(value) ? String.valueOf((char)value) : ".");
+        }
+
+        public int getAddress() { return address.get(); }
+        public void setAddress(int address) { this.address.set(address); }
+        public byte getValue() { return value; }
+        public String getHexValue() { return hexValue.get(); }
+        public String getAscii() { return ascii.get(); }
+
+        public SimpleIntegerProperty addressProperty() { return address; }
+        public SimpleStringProperty hexValueProperty() { return hexValue; }
+        public SimpleStringProperty asciiProperty() { return ascii; }
+    }
+
+    public ConfigurationController() {
         operations = new HashMap<>();
         cacheParams = new HashMap<>();
         bufferSizes = new HashMap<>();
+        memoryData = FXCollections.observableArrayList();
+        memory = new Memory(1024); // Initialize with 1024 bytes
     }
+
+    private void setupMemoryTable() {
+        memoryTable = new TableView<>();
+        memoryTable.setEditable(true);
+
+        // Create columns
+        TableColumn<MemoryEntry, Integer> addressCol = new TableColumn<>("Address");
+        TableColumn<MemoryEntry, String> hexValueCol = new TableColumn<>("Value (Hex)");
+        TableColumn<MemoryEntry, String> asciiCol = new TableColumn<>("ASCII");
+
+        // Set cell factories
+        addressCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+        hexValueCol.setCellFactory(TextFieldTableCell.forTableColumn());
+
+        // Set cell value factories
+        addressCol.setCellValueFactory(cellData -> cellData.getValue().addressProperty().asObject());
+        hexValueCol.setCellValueFactory(cellData -> cellData.getValue().hexValueProperty());
+        asciiCol.setCellValueFactory(cellData -> cellData.getValue().asciiProperty());
+
+        // Set column edit handlers
+        addressCol.setOnEditCommit(event -> {
+            MemoryEntry entry = event.getRowValue();
+            if (isValidAddress(event.getNewValue())) {
+                entry.setAddress(event.getNewValue());
+            } else {
+                memoryTable.refresh();
+                showError("Invalid address. Must be between 0 and 1023.");
+            }
+        });
+
+        hexValueCol.setOnEditCommit(event -> {
+            MemoryEntry entry = event.getRowValue();
+            try {
+                // Convert hex string to byte value
+                int value = Integer.parseInt(event.getNewValue(), 16);
+                if (isValidValue(value)) {
+                    entry.setValue((byte)value);
+                } else {
+                    memoryTable.refresh();
+                    showError("Invalid value. Must be between -128 and 127 for bytes.");
+                }
+            } catch (NumberFormatException e) {
+                memoryTable.refresh();
+                showError("Invalid hex value. Please enter a valid hexadecimal number.");
+            }
+        });
+
+        memoryTable.getColumns().addAll(addressCol, hexValueCol, asciiCol);
+        memoryTable.setItems(memoryData);
+        memoryTable.setPrefHeight(200);
+    }
+
+    private boolean isValidAddress(int address) {
+        return address >= 0 && address < 1024;
+    }
+
+    private boolean isValidValue(int value) {
+        return value >= -128 && value <= 127; // Valid byte range
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Invalid Input");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     public VBox createConfigView() {
         VBox root = new VBox(10);
         root.setPadding(new Insets(20));
 
+        // Create HBox for side-by-side layout
+        HBox mainContent = new HBox(20);  // 20 pixels spacing between left and right sides
+
+        // Left side - Configuration Fields
+        VBox leftSide = new VBox(10);
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
 
         // Instruction Operations
-        grid.add(new Label("Instruction Operations"), 0, 0, 2, 1);
+        Label instructionLabel = new Label("Instruction Operations");
+        instructionLabel.setStyle("-fx-font-weight: bold");
+        grid.add(instructionLabel, 0, 0, 2, 1);
+
         grid.add(new Label("ADD:"), 0, 1);
         addLatency = new TextField();
         grid.add(addLatency, 1, 1);
@@ -57,7 +184,10 @@ public class ConfigurationController {
         grid.add(storeLatency, 1, 6);
 
         // Cache Parameters
-        grid.add(new Label("Cache Parameters"), 0, 7, 2, 1);
+        Label cacheLabel = new Label("Cache Parameters");
+        cacheLabel.setStyle("-fx-font-weight: bold");
+        grid.add(cacheLabel, 0, 7, 2, 1);
+
         grid.add(new Label("Cache Size:"), 0, 8);
         cacheSize = new TextField();
         grid.add(cacheSize, 1, 8);
@@ -75,7 +205,10 @@ public class ConfigurationController {
         grid.add(missLatency, 1, 11);
 
         // Buffer Sizes
-        grid.add(new Label("Buffer Sizes"), 0, 12, 2, 1);
+        Label bufferLabel = new Label("Buffer Sizes");
+        bufferLabel.setStyle("-fx-font-weight: bold");
+        grid.add(bufferLabel, 0, 12, 2, 1);
+
         grid.add(new Label("Add/Sub Stations:"), 0, 13);
         addSubStations = new TextField();
         grid.add(addSubStations, 1, 13);
@@ -92,15 +225,66 @@ public class ConfigurationController {
         storeBuffers = new TextField();
         grid.add(storeBuffers, 1, 16);
 
-        root.getChildren().add(grid);
+        leftSide.getChildren().add(grid);
 
-        // Buttons
+        // Right side - Memory Configuration
+        VBox rightSide = new VBox(10);
+        rightSide.setPadding(new Insets(0, 0, 0, 20)); // Add padding to separate from left side
+
+        Label memoryLabel = new Label("Memory Configuration");
+        memoryLabel.setStyle("-fx-font-weight: bold");
+
+        setupMemoryTable();
+
+        // Set preferred width for memory table and make it fill the space
+        memoryTable.setPrefWidth(300);
+        memoryTable.setMinWidth(250);
+
+        // Style the table columns to match the theme
+        memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // Add memory control buttons
+        HBox memoryControls = new HBox(10);
+        memoryControls.setPadding(new Insets(10, 0, 0, 0));
+
+        Button addRowButton = new Button("Add Row");
+        Button removeRowButton = new Button("Remove Selected");
+        Button clearMemoryButton = new Button("Clear Memory");
+
+        addRowButton.setOnAction(e -> {
+            memoryData.add(new MemoryEntry(0, (byte)0));
+        });
+
+        removeRowButton.setOnAction(e -> {
+            MemoryEntry selected = memoryTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                memoryData.remove(selected);
+            }
+        });
+
+        clearMemoryButton.setOnAction(e -> {
+            memoryData.clear();
+        });
+
+        memoryControls.getChildren().addAll(addRowButton, removeRowButton, clearMemoryButton);
+        rightSide.getChildren().addAll(memoryLabel, memoryTable, memoryControls);
+
+        // Add left and right sides to main content
+        mainContent.getChildren().addAll(leftSide, rightSide);
+
+        // Add spacing before the button box
+        VBox.setMargin(mainContent, new Insets(0, 0, 10, 0));
+
+        // Add main content to root
+        root.getChildren().add(mainContent);
+
+        // Save button at bottom
         HBox buttonBox = new HBox(10);
+        buttonBox.setPadding(new Insets(10, 0, 0, 0));
         Button saveButton = new Button("Save");
         saveButton.setOnAction(e -> handleSave());
         toaster = new Label("");
         buttonBox.getChildren().addAll(saveButton, toaster);
-
 
         root.getChildren().add(buttonBox);
 
@@ -137,30 +321,49 @@ public class ConfigurationController {
         TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency, loadLatency, storeLatency,
                 cacheSize, blockSize, hitLatency, missLatency, addSubStations, mulDivStations, loadBuffers, storeBuffers
         };
+
+        // Check if required fields are filled
         for(TextField field : allFields){
             if(field.getText() == null || field.getText().isEmpty()){
                 toaster.setText("Please fill in all text fields!");
+                toaster.setStyle("-fx-text-fill: red;");
                 return;
             }
         }
+
         try {
             updateOperations();
             updateCacheParams();
             updateBufferSizes();
+            updateMemory();
+
+            // Print debug information
+            System.out.println("Configuration saved:");
+            System.out.println("Operations: " + operations);
+            System.out.println("Cache parameters: " + cacheParams);
+            System.out.println("Buffer sizes: " + bufferSizes);
+            printMemoryState();
+
+            // Update toaster with success message
+            toaster.setText("Configuration successfully saved!");
+            toaster.setStyle("-fx-text-fill: green;");
+
+            // Add visual feedback
+            Timeline timeline = new Timeline(
+                    new KeyFrame(Duration.ZERO, evt -> toaster.setVisible(true)),
+                    new KeyFrame(Duration.seconds(3), evt -> toaster.setVisible(false))
+            );
+            timeline.play();
+
         } catch(NumberFormatException e){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Invalid Input");
-            alert.setHeaderText(null);
-            alert.setContentText(" Please enter integer numbers.");
-            alert.showAndWait();
+            toaster.setText("Please enter valid numbers");
+            toaster.setStyle("-fx-text-fill: red;");
+            e.printStackTrace();
         } catch(Exception e){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText(null);
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            toaster.setText("Error: " + e.getMessage());
+            toaster.setStyle("-fx-text-fill: red;");
+            e.printStackTrace();
         }
-        toaster.setText("Successfully configured!");
     }
 
     private void updateOperations() {
@@ -192,5 +395,45 @@ public class ConfigurationController {
         bufferSizes.put("mulDiv", Integer.parseInt(mulDivStations.getText()));
         bufferSizes.put("load", Integer.parseInt(loadBuffers.getText()));
         bufferSizes.put("store", Integer.parseInt(storeBuffers.getText()));
+    }
+
+    private void updateMemory() {
+        try {
+            memory.clear();
+
+            for (MemoryEntry entry : memoryData) {
+                if (isValidAddress(entry.getAddress())) {
+                    memory.writeByte(entry.getAddress(), entry.getValue());
+                    System.out.println("Writing value " + entry.getValue() + " to address " + entry.getAddress());
+                } else {
+                    throw new IllegalArgumentException("Invalid memory configuration at address: " + entry.getAddress());
+                }
+            }
+
+            System.out.println("Memory updated with " + memoryData.size() + " entries");
+
+            // Verify the written values
+            for (MemoryEntry entry : memoryData) {
+                byte readValue = memory.readByte(entry.getAddress());
+                System.out.println("Verification - Address: " + entry.getAddress() +
+                        ", Value: " + readValue +
+                        ", Hex: " + String.format("%02X", readValue & 0xFF));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error updating memory: " + e.getMessage());
+        }
+    }
+    public void printMemoryState() {
+        System.out.println("Current Memory State:");
+        for (int i = 0; i < memory.getSize(); i++) {
+            byte value = memory.readByte(i);
+            if (value != 0) {
+                System.out.println("Address " + i + ": " + value);
+            }
+        }
+    }
+    public Memory getMemory() {
+        return memory;
     }
 }
