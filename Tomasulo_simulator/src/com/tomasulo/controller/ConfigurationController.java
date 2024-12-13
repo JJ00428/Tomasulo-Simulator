@@ -500,6 +500,8 @@ public class ConfigurationController {
     }
 
     private void handleSave() {
+        updateMemory();
+        updateRegisterFiles();
         TextField[] allFields = {addLatency, subLatency, mulLatency, divLatency,
                 cacheSize, blockSize, hitLatency, missLatency,
                 addSubStations, mulDivStations, loadBuffers, storeBuffers,
@@ -520,8 +522,6 @@ public class ConfigurationController {
             updateOperations();
             updateCacheParams();
             updateBufferSizes();
-            updateMemory();
-            updateRegisterFiles();
 
             // Print debug information
             System.out.println("Configuration saved:");

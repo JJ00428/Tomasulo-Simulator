@@ -136,7 +136,6 @@ public class Cache {
 
     }
     public long readLong(int address){
-        validateDoubleAddress(address);
         return ((long) readWord(address) << 32) |
                 (readWord(address + 4) & 0xFFFFFFFFL);
     }
@@ -156,14 +155,14 @@ public class Cache {
         writeWord(address, bits);
     }
     public double readDouble(int address) {
-        validateDoubleAddress(address);
+//        validateDoubleAddress(address);
         long bits = ((long) readWord(address) << 32) |
                 (readWord(address + 4) & 0xFFFFFFFFL);
         return Double.longBitsToDouble(bits);
     }
 
     public void writeDouble(int address, double value) {
-        validateDoubleAddress(address);
+//        validateDoubleAddress(address);
         long bits = Double.doubleToLongBits(value);
         writeWord(address, (int) (bits >>> 32));
         writeWord(address + 4, (int) bits);
