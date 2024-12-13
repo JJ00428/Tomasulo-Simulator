@@ -79,7 +79,7 @@ public class Cache {
         return blocks[blockIndex].valid && blocks[blockIndex].tag == tag;
     }
     public boolean requestWord(int address, String occupierID){
-        validateWordAddress(address);
+//        validateWordAddress(address);
         if(!isOccupier(address, occupierID))
             return false;
         if(!isBusy(address)){
@@ -103,7 +103,7 @@ public class Cache {
     // and doubles are place at addresses divisible by 8)
     // NB: only use read or write after finishing cycles needed for execution
     public int readWord(int address){
-        validateWordAddress(address);
+//        validateWordAddress(address);
         int temp = address / blockSize;
         int blockIndex = temp % (1 << indexBits);
         int blockOffset = address % blockSize;
@@ -119,7 +119,7 @@ public class Cache {
         return memory.readWord(address);
     }
     public void writeWord(int address, int value){
-        validateWordAddress(address);
+//        validateWordAddress(address);
 
         int temp = address / blockSize;
         int blockIndex = temp % (1 << indexBits);
@@ -140,17 +140,17 @@ public class Cache {
                 (readWord(address + 4) & 0xFFFFFFFFL);
     }
     public void writeLong(int address, long value) {
-        validateDoubleAddress(address);
+//        validateDoubleAddress(address);
         writeWord(address, (int) (value >>> 32));
         writeWord(address + 4, (int) value);
     }
     public float readFloat(int address){
-        validateWordAddress(address);
+//        validateWordAddress(address);
         int bits = readWord(address);
         return Float.intBitsToFloat(bits);
     }
     public void writeFloat(int address, float value) {
-        validateWordAddress(address);
+//        validateWordAddress(address);
         int bits = Float.floatToIntBits(value);
         writeWord(address, bits);
     }

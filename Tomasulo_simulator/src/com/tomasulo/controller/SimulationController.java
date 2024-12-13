@@ -766,6 +766,9 @@ public class SimulationController {
         //to get tpe of opperation to know which rs or buffer to check
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
         // Use a regular expression to remove any label followed by a colon
         if (!(op.equals("BNE") || op.equals("BEQ"))) {
             op = op.replaceAll(".*:", "");
@@ -938,6 +941,9 @@ public class SimulationController {
         InstructionEntry instruction = instructions.get(instructions.size() - 1);
         String[] parts = instruction.getInstruction().split(" ");
         String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
         op = op.replaceAll(".*:", "");
         String dest = parts[1].replace(",", "");
         String src1 = parts.length > 2 ? parts[2].replace(",", "") : "";
@@ -1136,6 +1142,9 @@ public class SimulationController {
                     InstructionEntry instruction = lb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
                     String destReg = parts[1].replace(",", "");
 
                     double result;
@@ -1166,6 +1175,9 @@ public class SimulationController {
                     InstructionEntry instruction = lb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
                     String destReg = parts[1].replace(",", "");
 
                     double result;
@@ -1196,6 +1208,9 @@ public class SimulationController {
                     InstructionEntry instruction = sb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
                     String srcReg = parts[1].replace(",", "");
 
                     double value = sb.getValue();
@@ -1224,6 +1239,9 @@ public class SimulationController {
                     InstructionEntry instruction = sb.getInstruction();
                     String[] parts = instruction.getInstruction().split(" ");
                     String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
                     String srcReg = parts[1].replace(",", "");
 
                     double value = sb.getValue();
@@ -1273,6 +1291,9 @@ public class SimulationController {
 
                 String[] parts = instruction.getInstruction().split(" ");
                 String op = parts[0];
+                    if (!(op.equals("BNE") || op.equals("BEQ"))) {
+                        op = op.replaceAll(".*:", "");
+                    }
                 if (isBranchInstruction(op)) {
                     branchCurrentInstruction = currentInstruction;
                 } else {
