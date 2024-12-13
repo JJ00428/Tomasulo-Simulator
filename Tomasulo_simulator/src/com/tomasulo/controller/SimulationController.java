@@ -588,7 +588,12 @@ public class SimulationController {
     //-------------------Scene Updates-------------------
     private void updateDependentUnits(ExecutionUnit completedUnit) {
         //update register file
-        registerFile.clearStatus(completedUnit.getName());
+        registerFile.clearStatus(completedUnit.getName(), completedUnit.getResult());
+//        registerFile.setValue(completedUnit.getName(),completedUnit.getResult());
+
+        intRegisterFile.clearStatus(completedUnit.getName(), completedUnit.getResult());
+//        intRegisterFile.setValue(completedUnit.getName(),completedUnit.getResult());
+
 
         //give value to all rs that need it
         updateWaitingUnits(addSubStations, completedUnit);
@@ -1229,6 +1234,7 @@ public class SimulationController {
         }
         executeInstructions();
         writeResults();
+//        updateDisplay();
         System.out.println("Current Instruction: " + currentInstruction);
         if (isProgramComplete()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -1442,6 +1448,8 @@ public class SimulationController {
         if (integerEarliestUnit != null) {
             writeResult(integerEarliestUnit);
         }
+
+
     }
     private void writeBack(ExecutionUnit unit) {
         unit.getInstruction().setWriteTime(currentCycle);
