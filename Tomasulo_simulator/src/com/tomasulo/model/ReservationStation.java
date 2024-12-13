@@ -95,5 +95,20 @@ public class ReservationStation implements ExecutionUnit {
         setResult(0.0);
     }
 
-
+    @Override
+    public String toString() {
+        return "ReservationStation{" +
+                "name=" + name +
+                ", busy=" + busy +
+                ", operation=" + operation +
+                ", vj=" + vj +
+                ", vk=" + vk +
+                ", qj=" + qj +
+                ", qk=" + qk +
+                ", cycles=" + cycles +
+                ", readyToWrite=" + readyToWrite +
+                ", result=" + result +
+                ", instruction=" + instruction +
+                '}';
+    }
 }

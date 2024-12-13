@@ -9,7 +9,7 @@ public class InstructionEntry {
     private final IntegerProperty executeTime;
     private final IntegerProperty writeTime;
     private final String code;
-    private boolean isInLoop = false;
+    private boolean isInLoop;
 
     public InstructionEntry(String inst, int itr, String code) {
         this.instruction = new SimpleStringProperty(inst);
@@ -49,4 +49,17 @@ public class InstructionEntry {
     public void setWriteTime(int value) { writeTime.set(value); }
     public IntegerProperty writeTimeProperty() { return writeTime; }
     public String getCode() { return code;}
+
+    @Override
+    public String toString() {
+        return "InstructionEntry{" +
+                "instruction=" + instruction +
+                ", iteration=" + iteration +
+                ", issueTime=" + issueTime +
+                ", executeTime=" + executeTime +
+                ", writeTime=" + writeTime +
+                ", code='" + code + '\'' +
+                ", isInLoop=" + isInLoop +
+                '}';
+    }
 }
