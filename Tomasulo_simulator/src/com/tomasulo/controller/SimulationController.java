@@ -1353,11 +1353,11 @@ public class SimulationController {
         System.out.println(op.length());
         // Evaluate branch condition
         if (op.equals("BEQ")) {
-            conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
+            conditionMet = intRegisterFile.getValue(src1).equals(intRegisterFile.getValue(src2));
         } else if (op.equals("BNE")) {
-            System.out.println("First val: " + registerFile.getValue(src1));
-            System.out.println("First val: " + registerFile.getValue(src2));
-            conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
+            System.out.println("First val: " + intRegisterFile.getValue(src1));
+            System.out.println("Second val: " + intRegisterFile.getValue(src2));
+            conditionMet = !intRegisterFile.getValue(src1).equals(intRegisterFile.getValue(src2));
         }
 
         if (conditionMet) {
