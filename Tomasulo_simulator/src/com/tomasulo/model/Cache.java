@@ -9,8 +9,10 @@ import javafx.scene.chart.ScatterChart;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class Cache {
+    // TODO: have minimum size for cache block to fit double word
     private final int size;
     private final int blockSize;
     private final int hitLatency;
@@ -47,7 +49,28 @@ public class Cache {
             cacheEntries.add(new CacheEntry(i, blocks[i]));
         }
     }
-
+    private boolean isBusy(int address){
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        return blocks[blockIndex].busy;
+    }
+    private boolean isOccupier(int address, String occupierID){
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        return !blocks[blockIndex].busy || Objects.equals(occupierID, blocks[blockIndex].occupier);
+    }
+    private void setOccupier(int address, String occupierID){
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        blocks[blockIndex].busy = true;
+        blocks[blockIndex].occupier = occupierID;
+        blocks[blockIndex].remainingCycles = getAccessTime(address);
+    }
+    private void unOccupy(int address){
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        blocks[blockIndex].busy = false;
+    }
     public boolean isHit(int address) {
         // optimize later
         int temp = address / blockSize;
@@ -55,38 +78,52 @@ public class Cache {
         int tag = temp / (1 << indexBits);
         return blocks[blockIndex].valid && blocks[blockIndex].tag == tag;
     }
+    public boolean requestWord(int address, String occupierID){
+        validateWordAddress(address);
+        if(!isOccupier(address, occupierID))
+            return false;
+        if(!isBusy(address)){
+            setOccupier(address, occupierID);
+            return false;
+        }
+
+        int temp = address / blockSize;
+        int blockIndex = temp % (1 << indexBits);
+        blocks[blockIndex].remainingCycles--;
+        if(blocks[blockIndex].remainingCycles == 0){
+            unOccupy(address);
+            return true;
+        }
+        return false;
+    }
+    public boolean requestDouble(int address, String occupierID){
+        validateDoubleAddress(address);
+        return requestWord(address, occupierID);
+    }
     // Assume data is always aligned (words are placed at addresses divisible by 4
     // and doubles are place at addresses divisible by 8)
     // NB: only use read or write after finishing cycles needed for execution
     public int readWord(int address){
         validateWordAddress(address);
-        int temp = address / blockSize;
-        int blockIndex = temp % (1 << indexBits);
-        int blockOffset = address % blockSize;
-        if(isHit(address)){
-            return blocks[blockIndex].elements[blockOffset];
-        }
-        blocks[blockIndex].valid = true;
-        blocks[blockIndex].tag = temp / (1 << indexBits);
-        blocks[blockIndex].elements[blockOffset] = memory.readByte(address);
-        blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
-        blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
-        blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
+
+//        blocks[blockIndex].valid = true;
+//        blocks[blockIndex].tag = temp / (1 << indexBits);
+//        blocks[blockIndex].elements[blockOffset] = memory.readByte(address);
+//        blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
+//        blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
+//        blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
 
         return memory.readWord(address);
     }
     public void writeWord(int address, int value){
         validateWordAddress(address);
-        int temp = address / blockSize;
-        int blockIndex = temp % (1 << indexBits);
-        int blockOffset = address % blockSize;
 
-        blocks[blockIndex].valid = true;
-        blocks[blockIndex].tag = temp / (1 << indexBits);
-        blocks[blockIndex].elements[blockOffset] = (byte) (value >>> 24);
-        blocks[blockIndex].elements[blockOffset + 1] = (byte) (value >>> 16);
-        blocks[blockIndex].elements[blockOffset + 2] = (byte) (value >>> 8);
-        blocks[blockIndex].elements[blockOffset + 3] = (byte) value;
+//        blocks[blockIndex].valid = true;
+//        blocks[blockIndex].tag = temp / (1 << indexBits);
+//        blocks[blockIndex].elements[blockOffset] = (byte) (value >>> 24);
+//        blocks[blockIndex].elements[blockOffset + 1] = (byte) (value >>> 16);
+//        blocks[blockIndex].elements[blockOffset + 2] = (byte) (value >>> 8);
+//        blocks[blockIndex].elements[blockOffset + 3] = (byte) value;
 
         memory.writeWord(address, value);
 
@@ -160,7 +197,10 @@ public class Cache {
     private static class CacheBlock {
         public boolean valid;
         public int tag;
+        public String occupier;
+        public boolean busy;
         public byte[] elements;
+        public int remainingCycles;
 
         public CacheBlock(int blockSize) {
             valid = false;
