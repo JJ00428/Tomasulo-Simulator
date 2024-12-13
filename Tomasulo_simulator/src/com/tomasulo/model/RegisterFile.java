@@ -54,6 +54,10 @@ public class RegisterFile<T extends Number> {
         for (Map.Entry<String, String> entry : status.entrySet()) {
             if (entry.getValue().equals(tag)) {
                 entry.setValue("");
+                if(isInt){
+                    int tmp = (int)Double.parseDouble(value);
+                    value = Integer.toString(tmp);
+                }
                 values.put(entry.getKey(), value);
             }
         }
