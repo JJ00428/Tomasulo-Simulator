@@ -81,9 +81,9 @@ public class SimulationController {
             registerFile = config.getRegisterFile();
             intRegisterFile = config.getIntRegisterFile();
             //print all the memory
-            memory.getMemoryEntries().forEach(entry -> {
-                System.out.println("HERE"+" Address: " + entry.getAddress() + ", Value: " + entry.getHexValue());
-            });
+//            memory.getMemoryEntries().forEach(entry -> {
+//                System.out.println("HERE"+" Address: " + entry.getAddress() + ", Value: " + entry.getHexValue());
+//            });
             printRegisterState();
             simView = this.createView();
             root.setCenter(simView);
@@ -483,6 +483,9 @@ public class SimulationController {
         operations.put("BEQ", 2);
         operations.put("BNE", 2);
         if (!config.operations.isEmpty()) operations = config.operations;
+//        for (Map.Entry<String, Integer> entry : operations.entrySet()) {
+//            System.out.println("Instruction: " + entry.getKey() + " " + entry.getValue());
+//        }
 
         // Initialize cache
         if (config.cacheParams.isEmpty()) {
@@ -934,28 +937,31 @@ public class SimulationController {
         String src1 = parts.length > 2 ? parts[2].replace(",", "") : "";
         String src2 = parts.length > 3 ? parts[3].replace(",", "") : "";
 
-        if (op.equals("ADD") || op.equals("SUB") || op.equals("ADDI") || op.equals("SUBI") || op.equals("DADDI") || op.equals("DSUBI")) {
-            issueToIntAddSubStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("MUL") || op.equals("DIV")) {
-            issueToIntMulDivStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("ADD.D") || op.equals("ADD.S") || op.equals("SUB.D") || op.equals("SUB.S")) {
-            issueToAddSubStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("MUL.D") || op.equals("MUL.S") || op.equals("DIV.D") || op.equals("DIV.S")) {
-            issueToMulDivStation(instruction, op, dest, src1, src2);
-        } else if (op.equals("L.D") || op.equals("L.S")) {
-            LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
-            issueToLoadBuffer(instruction, dest, src1, lb);
-        } else if (op.equals("LW") || op.equals("LD")) {
-            LoadBuffer lb = firstAvailableLoadBuffer(intLoadBuffers);
-            issueToLoadBuffer(instruction, dest, src1, lb);
-        } else if (op.equals("S.D") || op.equals("S.S")) {
-            StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
-            issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
-        } else if (op.equals("SW") || op.equals("SD")) {
-            StoreBuffer sb = firstAvailableStoreBuffer(intStoreBuffers);
-            issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
-        } else if (op.equals("BEQ") || op.equals("BNE")) {
-            issueToBranch(instruction, op, dest, src1, src2);
+        switch (op) {
+            case "ADD", "SUB", "ADDI", "SUBI", "DADDI", "DSUBI" ->
+                    issueToIntAddSubStation(instruction, op, dest, src1, src2);
+            case "MUL", "DIV" -> issueToIntMulDivStation(instruction, op, dest, src1, src2);
+            case "ADD.D", "ADD.S", "SUB.D", "SUB.S" -> issueToAddSubStation(instruction, op, dest, src1, src2);
+            case "MUL.D", "MUL.S", "DIV.D", "DIV.S" -> issueToMulDivStation(instruction, op, dest, src1, src2);
+            case "L.D", "L.S" -> {
+                LoadBuffer lb = firstAvailableLoadBuffer(loadBuffers);
+                issueToLoadBuffer(instruction, dest, src1, lb);
+            }
+            case "LW", "LD" -> {
+                LoadBuffer lb = firstAvailableLoadBuffer(intLoadBuffers);
+                issueToLoadBuffer(instruction, dest, src1, lb);
+            }
+            case "S.D", "S.S" -> {
+                StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
+                issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
+
+            }
+            case "SW", "SD" -> {
+                StoreBuffer sb = firstAvailableStoreBuffer(intStoreBuffers);
+                issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
+
+            }
+            case "BEQ", "BNE" -> issueToBranch(instruction, op, dest, src1, src2);
         }
 
         // Set issue time for the instruction
@@ -1455,6 +1461,7 @@ public class SimulationController {
     }
     private void writeResult(ExecutionUnit unit) {
         if (unit != null) {
+            System.out.println(unit.getResult());
             //give value to all that needs them/ put on bus
             updateDependentUnits(unit);
 
