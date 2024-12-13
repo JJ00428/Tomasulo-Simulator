@@ -74,7 +74,6 @@ public class Cache {
         blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
 
         return memory.readWord(address);
-
     }
     public void writeWord(int address, int value){
         validateWordAddress(address);

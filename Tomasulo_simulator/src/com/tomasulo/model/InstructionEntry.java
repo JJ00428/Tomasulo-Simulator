@@ -9,6 +9,7 @@ public class InstructionEntry {
     private final IntegerProperty executeTime;
     private final IntegerProperty writeTime;
     private final String code;
+    private boolean isInLoop = false;
 
     public InstructionEntry(String inst, int itr, String code) {
         this.instruction = new SimpleStringProperty(inst);
@@ -17,6 +18,15 @@ public class InstructionEntry {
         this.executeTime = new SimpleIntegerProperty(-1);
         this.writeTime = new SimpleIntegerProperty(-1);
         this.code = code;
+        this.isInLoop = false;
+    }
+
+    public boolean isInLoop() {
+        return isInLoop;
+    }
+
+    public void setInLoop(boolean inLoop) {
+        isInLoop = inLoop;
     }
 
     public String getInstruction() { return instruction.get(); }

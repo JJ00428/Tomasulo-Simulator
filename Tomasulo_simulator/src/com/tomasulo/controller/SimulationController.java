@@ -57,7 +57,10 @@ public class SimulationController {
     private TableView<Memory.MemoryEntry> memoryTable;
     private Cache cache;
     private TableView<Cache.CacheEntry> cacheTable;
-
+    private int instructionCount = 0;
+    private int loopStartIndex = -1;
+    private int loopEndIndex = -1;
+    Button stepButton ;
     public SimulationController() {
         root = new BorderPane();
         configView = config.createConfigView();
@@ -87,7 +90,7 @@ public class SimulationController {
         HBox topBox = new HBox(10);
         cycleLabel = new Label("Cycle 0");
         cycleLabel.setStyle("-fx-font-size: 18px;");
-        Button stepButton = new Button("Step");
+        stepButton = new Button("Step");
         stepButton.setOnAction(e -> handleStep());
         Button resetButton = new Button("Reset");
         resetButton.setOnAction(e -> handleReset());
@@ -97,7 +100,7 @@ public class SimulationController {
         // Left
         VBox leftBox = new VBox(10);
         codeInput = new TextArea();
-        codeInput.setPrefRowCount(20);
+        codeInput.setPrefRowCount(10);
         codeInput.setPrefColumnCount(30);
         Button loadButton = new Button("Load Instructions");
         loadButton.setOnAction(e -> handleLoadInstructions());
@@ -177,7 +180,7 @@ public class SimulationController {
         root.setCenter(centerBox);
 
         // Right
-        HBox rightBox = new HBox(10);
+        VBox rightBox = new VBox(5);
 //        registerFileGrid = new GridPane();
 //        registerFileGrid.setHgap(5);
 //        registerFileGrid.setVgap(5);
@@ -379,7 +382,7 @@ public class SimulationController {
     }
 
 
-    private void setupRegisterFile(HBox rightBox) {
+    private void setupRegisterFile(VBox rightBox) {
         registerFileGrid = new GridPane();
         registerFileGrid.setHgap(5);
         registerFileGrid.setVgap(5);
@@ -523,54 +526,195 @@ public class SimulationController {
         instructionTable.getItems().clear();
         setupInitialValues();
         updateDisplay();
+        stepButton.setDisable(false);
     }
 
+    private void markLoopInstructions(int startIndex, int endIndex) {
+        loopStartIndex = startIndex;
+        loopEndIndex = endIndex;
+        for (int i = 0; i < instructions.size(); i++) {
+            InstructionEntry instruction = instructions.get(i);
+            instruction.setInLoop(i >= startIndex && i <= endIndex);
+        }
+    }
+
+    private int getTotalInstructionsCount() {
+        if (loopStartIndex == -1 || loopEndIndex == -1) {
+            return instructionCount; // No loop marked
+        }
+
+        int nonLoopInstructions = instructionCount - (loopEndIndex - loopStartIndex + 1);
+        int loopInstructions = (loopEndIndex - loopStartIndex + 1) * loop;
+        return nonLoopInstructions + loopInstructions;
+    }
+
+
+//    private void handleLoadInstructions() {
+//        String[] lines = codeInput.getText().split("\n");
+//        instructions.clear();
+//        for (int i = 0; i < lines.length; i++) {
+//            instructions.add(new InstructionEntry(lines[i].trim(), loop, lines[i].trim())); // Initialize iteration to 1
+//        }
+//        instructionCount = instructions.size();
+//        currentInstruction = 0;
+//
+//        //to know they've been loaded successfully
+//        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+//        alert.setTitle("Instructions Loaded");
+//        alert.setHeaderText(null);
+//        alert.setContentText("Instructions have been successfully loaded.");
+//        alert.showAndWait();
+//    }
 
     private void handleLoadInstructions() {
         String[] lines = codeInput.getText().split("\n");
         instructions.clear();
+
+        // First pass: load instructions and look for loop labels
+        String loopStartLabel = null;
+        String loopEndLabel = null;
         for (int i = 0; i < lines.length; i++) {
-            instructions.add(new InstructionEntry(lines[i].trim(), loop, lines[i].trim())); // Initialize iteration to 1
+            String line = lines[i].trim();
+            instructions.add(new InstructionEntry(line, loop, line));
+
+            if (line.contains(":") && !line.startsWith("BEQ") && !line.startsWith("BNE")) {
+                loopStartLabel = line.split(":")[0].trim();
+            }
+
+            if ((line.startsWith("BEQ") || line.startsWith("BNE")) && loopStartLabel != null) {
+                String[] parts = line.split(" ");
+                if (parts.length > 3 && parts[3].equals(loopStartLabel)) {
+                    loopEndLabel = loopStartLabel;
+                    // Mark the loop boundaries
+                    markLoopInstructions(findLabelIndex(loopStartLabel), i);
+                }
+            }
         }
+
+        instructionCount = instructions.size();
         currentInstruction = 0;
 
-        //to know they've been loaded successfully
+        // Notification
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Instructions Loaded");
         alert.setHeaderText(null);
-        alert.setContentText("Instructions have been successfully loaded.");
+        alert.setContentText("Instructions have been successfully loaded." +
+                (loopEndLabel != null ? " Loop detected." : ""));
         alert.showAndWait();
     }
 
+    private int findLabelIndex(String label) {
+        for (int i = 0; i < instructions.size(); i++) {
+            if (instructions.get(i).getInstruction().startsWith(label + ":")) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+//    private void executeOneCycle() {
+//        //Issue
+//        //if there are instructions to issue, and there's a place for the one in turn, then issue it
+//        if (currentInstruction <( instructionCount * loop)) {
+//            if (!instructions.isEmpty() && canIssueInstruction(instructions.get(currentInstruction))) {
+//                InstructionEntry instruction = instructions.get(currentInstruction);
+//                issueInstruction(instructions.get(currentInstruction));
+//                String[] parts = instruction.getInstruction().split(" ");
+//                String op = parts[0];
+//                if (op.equals("BNE") || op.equals("BEQ")) {
+//                    branchCurrentInstruction = currentInstruction;
+//                    currentInstruction = Integer.MAX_VALUE;
+//
+//                }
+//                if (!(op.equals("BNE") || op.equals("BEQ"))) {
+//                    currentInstruction++;
+//                }
+//            }
+//        }
+//
+//        //Execute
+//        executeInstructions();
+//
+//        //Write
+//        writeResults();
+//
+//    }
+private boolean isProgramComplete() {
+    if (currentInstruction < getTotalInstructionsCount()) {
+        return false;
+    }
+
+    for (ReservationStation rs : addSubStations) {
+        if (rs.isBusy()) return false;
+    }
+    for (ReservationStation rs : mulDivStations) {
+        if (rs.isBusy()) return false;
+    }
+    for (ReservationStation rs : intAddSubStations) {
+        if (rs.isBusy()) return false;
+    }
+    for (ReservationStation rs : intMulDivStations) {
+        if (rs.isBusy()) return false;
+    }
+
+    for (LoadBuffer lb : loadBuffers) {
+        if (lb.isBusy()) return false;
+    }
+    for (LoadBuffer lb : intLoadBuffers) {
+        if (lb.isBusy()) return false;
+    }
+
+    for (StoreBuffer sb : storeBuffers) {
+        if (sb.isBusy()) return false;
+    }
+    for (StoreBuffer sb : intStoreBuffers) {
+        if (sb.isBusy()) return false;
+    }
+
+    for (BranchStation bs : branchStations) {
+        if (bs.isBusy()) return false;
+    }
+
+    return true;
+}
 
     private void executeOneCycle() {
-        //Issue
-        //if there are instructions to issue, and there's a place for the one in turn, then issue it
-        if (currentInstruction < instructions.size()) {
+        if (currentInstruction < getTotalInstructionsCount()) {
             if (!instructions.isEmpty() && canIssueInstruction(instructions.get(currentInstruction))) {
                 InstructionEntry instruction = instructions.get(currentInstruction);
-                issueInstruction(instructions.get(currentInstruction));
+
+                // Calculate actual instruction index considering loops
+                int actualIndex = currentInstruction;
+                if (instruction.isInLoop() && loop > 1) {
+                    actualIndex = loopStartIndex +
+                            (currentInstruction - loopStartIndex) %
+                                    (loopEndIndex - loopStartIndex + 1);
+                }
+
+                instruction = instructions.get(actualIndex);
+                issueInstruction(instruction);
+
                 String[] parts = instruction.getInstruction().split(" ");
                 String op = parts[0];
                 if (op.equals("BNE") || op.equals("BEQ")) {
                     branchCurrentInstruction = currentInstruction;
                     currentInstruction = Integer.MAX_VALUE;
-
                 }
                 if (!(op.equals("BNE") || op.equals("BEQ"))) {
                     currentInstruction++;
                 }
             }
         }
-
-        //Execute
         executeInstructions();
-
-        //Write
         writeResults();
-
-
-
+        if (isProgramComplete()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Program Complete");
+            alert.setHeaderText(null);
+            alert.setContentText("Program execution has completed.\nTotal cycles: " + currentCycle);
+            alert.showAndWait();
+            stepButton.setDisable(true);
+        }
     }
 
     private boolean hasAvailableStation(List<ReservationStation> stations) {
