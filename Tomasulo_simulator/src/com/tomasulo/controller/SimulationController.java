@@ -749,10 +749,10 @@ public class SimulationController {
         rs.setOperation(op);
 
         // Set up source operands for comparison
-        rs.setVj(registerFile.getValue(dest));
-        rs.setVk(src1 != null ? registerFile.getValue(src1) : "");
-        rs.setQj(registerFile.getStatus(dest));
-        rs.setQk(src1 != null ? registerFile.getStatus(src1) : "");
+        rs.setVj(intRegisterFile.getValue(dest));
+        rs.setVk(src1 != null ? intRegisterFile.getValue(src1) : "");
+        rs.setQj(intRegisterFile.getStatus(dest));
+        rs.setQk(src1 != null ? intRegisterFile.getStatus(src1) : "");
 
         rs.setCycles(operations.get(op));
         rs.setTarget(src2);
@@ -1332,6 +1332,8 @@ public class SimulationController {
         String target = branchStation.getTarget();
         String src1 = branchStation.getVj();
         String src2 = branchStation.getVk();
+        System.out.println("src1: " + src1);
+        System.out.println("src2: " + src2);
 
         // Convert target to an address or instruction index
         int targetAddress = getAddressFromLabel(target);
@@ -1344,10 +1346,16 @@ public class SimulationController {
         currentInstruction = branchCurrentInstruction;
         boolean conditionMet = false;
 
+
+        System.out.println("Branching: 🌳🌳");
+        System.out.println(op);
+        System.out.println(op.length());
         // Evaluate branch condition
         if (op.equals("BEQ")) {
             conditionMet = registerFile.getValue(src1).equals(registerFile.getValue(src2));
         } else if (op.equals("BNE")) {
+            System.out.println("First val: " + registerFile.getValue(src1));
+            System.out.println("First val: " + registerFile.getValue(src2));
             conditionMet = !registerFile.getValue(src1).equals(registerFile.getValue(src2));
         }
 
