@@ -73,4 +73,16 @@ public class LoadBuffer implements ExecutionUnit {
     @Override
     public InstructionEntry getInstruction() { return instruction; }
 
+    @Override
+    public String toString() {
+        return "LoadBuffer{" +
+                "name=" + name +
+                ", busy=" + busy +
+                ", address=" + address +
+                ", cycles=" + cycles +
+                ", readyToWrite=" + readyToWrite +
+                ", result=" + result +
+                ", instruction=" + instruction +
+                '}';
+    }
 }

@@ -477,7 +477,7 @@ public class SimulationController {
 
         // Initialize cache
         if (config.cacheParams.isEmpty())
-            cache = new Cache(32, 4, 1, 10, memory); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
+            cache = new Cache(32, 8, 1, 10, memory); //32 blocks,4 words per block,1 cycle hit,10 cycles miss
         else
             cache = new Cache(config.cacheParams.get("size"), config.cacheParams.get("blockSize"), config.cacheParams.get("hitLatency"), config.cacheParams.get("missLatency"), memory);
 
@@ -735,6 +735,8 @@ public class SimulationController {
         String dest = parts[1].replace(",", "");
         String src1 = parts[2].replace(",", "");
         String src2 = parts.length > 3 ? parts[3] : null;
+        System.out.println("Dest: " + dest);
+        System.out.println("src: " + src1);
 
 
         //is there an empty reservation station or buffer for this instruction?
@@ -760,7 +762,7 @@ public class SimulationController {
             }
             return false;
         } else if (op.equals("SD") || op.equals("SW") || op.equals("S.S") || op.equals("S.D")) {
-            int effectiveAddress = calculateEffectiveAddress(dest);
+            int effectiveAddress = calculateEffectiveAddress(src1); // src is the address for stores
             for (LoadBuffer lb : loadBuffers) {
                 if (lb.isBusy() && lb.getAddress() == effectiveAddress) {
                     return false;//WAR
@@ -807,8 +809,8 @@ public class SimulationController {
                 return baseAddress + offset;
             }
         } else {
-            String value = registerFile.getValue(addressString);
-            return Integer.parseInt(value); // For standalone addresses
+            System.out.println(addressString);
+            return Integer.parseInt(addressString); // For standalone addresses
         }
     }
     private void issueToAddSubStation(InstructionEntry instruction, String op, String dest, String src1, String src2) {
@@ -918,10 +920,10 @@ public class SimulationController {
             issueToLoadBuffer(instruction, dest, src1, lb);
         } else if (op.equals("S.D") || op.equals("S.S")) {
             StoreBuffer sb = firstAvailableStoreBuffer(storeBuffers);
-            issueToStoreBuffer(instruction, src1, dest, sb);
+            issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
         } else if (op.equals("SW") || op.equals("SD")) {
             StoreBuffer sb = firstAvailableStoreBuffer(intStoreBuffers);
-            issueToStoreBuffer(instruction, src1, dest, sb);
+            issueToStoreBuffer(instruction, dest, src1, sb); // src1 is the address for store
         } else if (op.equals("BEQ") || op.equals("BNE")) {
             issueToBranch(instruction, op, dest, src1, src2);
         }

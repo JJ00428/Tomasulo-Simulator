@@ -83,4 +83,17 @@ public class StoreBuffer implements ExecutionUnit {
     @Override
     public InstructionEntry getInstruction() { return instruction; }
 
+    @Override
+    public String toString() {
+        return "StoreBuffer{" +
+                "name=" + name +
+                ", busy=" + busy +
+                ", address=" + address +
+                ", value=" + value +
+                ", q=" + q +
+                ", cycles=" + cycles +
+                ", readyToWrite=" + readyToWrite +
+                ", instruction=" + instruction +
+                '}';
+    }
 }
