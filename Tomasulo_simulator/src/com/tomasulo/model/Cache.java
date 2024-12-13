@@ -113,6 +113,8 @@ public class Cache {
         blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
         blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
         blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
+        // Update display entries
+        cacheEntries.get(blockIndex).setValue(blocks[blockIndex]);
 
         return memory.readWord(address);
     }
@@ -128,6 +130,7 @@ public class Cache {
         blocks[blockIndex].elements[blockOffset + 1] = memory.readByte(address + 1);
         blocks[blockIndex].elements[blockOffset + 2] = memory.readByte(address + 2);
         blocks[blockIndex].elements[blockOffset + 3] = memory.readByte(address + 3);
+        cacheEntries.get(blockIndex).setValue(blocks[blockIndex]);
 
         memory.writeWord(address, value);
 
@@ -241,9 +244,11 @@ public class Cache {
             return b >= 32 && b <= 126;
         }
 
-        public void setValue(byte[] elements) {
+        public void setValue(CacheBlock cacheBlock) {
+            valid.setValue(cacheBlock.valid);
+            tag.setValue(cacheBlock.tag);
             hexValues.set("");
-            for(byte element : elements){
+            for(byte element : cacheBlock.elements){
                 hexValues.set(hexValues.get() + ", " +  String.format("%02X", element));
             }
 //            ascii.set(isPrintable(value) ? String.valueOf((char)value) : ".");
